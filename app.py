@@ -15,7 +15,7 @@ def main():
     with st.sidebar:
       
         st.header("Navigation")
-        page = st.radio("Select Page', ["Data Visualisation"])
+        page = st.radio("Select Page", ["Data Visualisation"])
         st.session_state.page = page
 
   if st.session_state.page == "Data Visualisation":
