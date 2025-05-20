@@ -11,13 +11,12 @@ st.set_page_config(
 )
 
 def main():
-
-    with st.sidebar:
+  with st.sidebar:
       
-        st.header("Navigation")
-        page = st.radio("Select Page", ["Data Visualisation"])
-        st.session_state.page = page
-
+      st.header("Navigation")
+      page = st.radio("Select Page", ["Data Visualisation"])
+      st.session_state.page = page
+    
   if st.session_state.page == "Data Visualisation":
       show_data_visualisation_page()
 
