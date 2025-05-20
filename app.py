@@ -11,6 +11,8 @@ st.set_page_config(
 )
 
 def main():
+  st.header(page_title)
+
   with st.sidebar:
       
       st.header("Navigation")
