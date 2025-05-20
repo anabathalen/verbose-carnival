@@ -11,12 +11,12 @@ st.set_page_config(
 )
 
 def main():
-  st.header(page_title)
+  
+  st.header("Native IM-MS Data Processing Tools")
 
   with st.sidebar:
-      
-      st.header("Navigation")
-      page = st.radio("Select Page", ["Data Visualisation"])
+      st.header("Natvigation")
+      page = st.radio("Select Page", "Data Visualisation")
       st.session_state.page = page
     
   if st.session_state.page == "Data Visualisation":
