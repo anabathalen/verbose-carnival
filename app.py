@@ -15,8 +15,6 @@ st.set_page_config(
 if "page" not in st.session_state:
   st.session_state.page = "Welcome"
 
-st.header("Native IM-MS Data Processing Tools")
-
 with st.sidebar:
     st.header("Navigation")
     selected_page = st.radio(
