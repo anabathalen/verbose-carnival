@@ -12,24 +12,23 @@ st.set_page_config(
 
 # Initialize session state if needed
 if "page" not in st.session_state:
-    st.session_state.page = "Data Visualisation"
+  st.session_state.page = "Welcome"
 
-# Page title - moved outside of any function
-page_title = "Native IM-MS Data Processing Tools"
-st.header(page_title)
+st.header("Native IM-MS Data Processing Tools")
 
-# Sidebar navigation - moved outside of functions to ensure it always shows
 with st.sidebar:
     st.header("Navigation")
     selected_page = st.radio(
-        "Select Page", 
-        ["Data Visualisation"],
-        key="page_selection"  # Unique key for the radio button
+      "Select Page", 
+      ["Welcome", "Data Visualisation"],
+      key="page_selection",
+      index = 0 if st.session_state.page == "Welcome" else 1
     )
     
     # Update session state with the selected page
     st.session_state.page = selected_page
 
-# Display the selected page based on session state
-if st.session_state.page == "Data Visualisation":
-    show_data_visualisation_page()
+if st.session_state.page == "Welcome":
+  show_welcome_page()
+elif st.session_state.page == "Data Visualisation":
+  show_data_visualisation_page()
