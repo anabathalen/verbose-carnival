@@ -10,16 +10,16 @@ if "page" not in st.session_state:
   st.session_state.page = "Welcome"
 
 with st.sidebar:
-    st.header("Navigation")
-    selected_page = st.radio(
-      "Select Page", 
-      ["Welcome", "Data Visualisation"],
-      key="page_selection",
-      index = 0 if st.session_state.page == "Welcome" else 1
-    )
+  st.header("Navigation")
+  selected_page = st.radio(
+    "Select Page", 
+    ["Welcome", "Data Visualisation"],
+    key="page_selection",
+    index = 0 if st.session_state.page == "Welcome" else 1
+  )
     
-    # Update session state with the selected page
-    st.session_state.page = selected_page
+  # Update session state with the selected page
+  st.session_state.page = selected_page
 
 if st.session_state.page == "Welcome":
   show_welcome_page()
