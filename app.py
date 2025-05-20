@@ -5,12 +5,6 @@ import os
 from pages.data_visualisation import show_data_visualisation_page
 from pages.welcome_page import show_welcome_page
 
-st.set_page_config(
-  page_title = "Native IM-MS Data Processing Tools",
-  layout = "wide",
-  initial_sidebar_state = "expanded"
-)
-
 # Initialize session state if needed
 if "page" not in st.session_state:
   st.session_state.page = "Welcome"
