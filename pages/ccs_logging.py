@@ -28,8 +28,8 @@ def check_doi_exists(existing_data, doi):
     """Check if normalized DOI already exists in the dataframe."""
     if existing_data is None or existing_data.empty or 'doi' not in existing_data.columns:
         return False
-    normalized_doi = normalize_doi(doi)
-    normalized_existing = set(normalize_doi(x) for x in existing_data['doi'].dropna())
+    normalized_doi = normalize_doi(str(doi))  # Force to string here
+    normalized_existing = set(normalize_doi(str(x)) for x in existing_data['doi'].dropna())  # And here
     return normalized_doi in normalized_existing
 
 def get_paper_details(doi):
