@@ -7,28 +7,30 @@ from github import Github, GithubException
 
 # --- Helper Functions ---
 
+import re
+
 def validate_doi(doi):
     """Validate DOI format using regex."""
     doi_pattern = r'^10\.\d{4,9}/[-._;()/:A-Z0-9]+$'
     return re.match(doi_pattern, doi.strip(), re.IGNORECASE) is not None
 
 def normalize_doi(doi):
-    """Normalize DOI by stripping whitespace, lowercasing, and removing 'https://doi.org/' if present."""
+    """Normalize DOI by stripping whitespace, lowercasing, and removing any prefix."""
     if not isinstance(doi, str):
         return ""
     doi = doi.strip().lower()
-    if doi.startswith("https://doi.org/"):
-        doi = doi.replace("https://doi.org/", "")
+    for prefix in ("https://doi.org/", "http://doi.org/", "https://dx.doi.org/", "http://dx.doi.org/"):
+        if doi.startswith(prefix):
+            doi = doi.replace(prefix, "")
     return doi
 
 def check_doi_exists(existing_data, doi):
     """Check if normalized DOI already exists in the dataframe."""
-    if existing_data is None or existing_data.empty:
+    if existing_data is None or existing_data.empty or 'doi' not in existing_data.columns:
         return False
     normalized_doi = normalize_doi(doi)
-    existing_dois = [normalize_doi(x) for x in existing_data['doi'].dropna()]
-    return normalized_doi in existing_dois
-
+    normalized_existing = set(normalize_doi(x) for x in existing_data['doi'].dropna())
+    return normalized_doi in normalized_existing
 
 def get_paper_details(doi):
     """Fetch paper details from CrossRef API."""
