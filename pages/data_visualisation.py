@@ -2,5 +2,5 @@ import streamlit as st
 import pandas as pd
 import os
 
-def show_data_visualisation_page():
-  st.write("AHHHHHHH")
+st.title("Hello Page")
+st.write("This is Page 1!")
