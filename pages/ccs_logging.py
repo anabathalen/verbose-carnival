@@ -146,7 +146,6 @@ def show_data_entry_page():
         return pd.DataFrame()
 
     existing_data = load_existing_data()
-    print(existing data)
 
     # DOI check section
     with st.expander("DOI Check", expanded=True):
@@ -166,7 +165,7 @@ def show_data_entry_page():
                 paper_details = get_paper_details(doi)
                 if check_doi_exists(existing_data, doi):
                     st.warning(f"This paper (DOI: {doi}) already exists in the database!")
-                    paper_entries = existing_data[existing_data['doi'] == doi]
+                    paper_entries = str(existing_data[existing_data['doi']) == str(doi)]
                     st.write(f"Found {len(paper_entries)} entries from this paper:")
                     st.dataframe(paper_entries)
                     st.session_state.show_full_form = False
