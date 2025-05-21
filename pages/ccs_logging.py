@@ -165,7 +165,7 @@ def show_data_entry_page():
                 paper_details = get_paper_details(doi)
                 if check_doi_exists(existing_data, doi):
                     st.warning(f"This paper (DOI: {doi}) already exists in the database!")
-                    paper_entries = str(existing_data[existing_data['doi']) == str(doi)]
+                    paper_entries = existing_data[existing_data['doi'] == doi]
                     st.write(f"Found {len(paper_entries)} entries from this paper:")
                     st.dataframe(paper_entries)
                     st.session_state.show_full_form = False
@@ -293,4 +293,3 @@ def show_data_entry_page():
                     st.error("GitHub authentication failed.")
 
 show_data_entry_page()
-
