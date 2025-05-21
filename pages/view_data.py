@@ -2,11 +2,27 @@ import pandas as pd
 import streamlit as st
 import plotly.express as px
 
-# Load GitHub CSV
-from utils.github_utils import authenticate_github, get_repository, get_existing_data
-g = authenticate_github()
-repo = get_repository(g, st.secrets["REPO_NAME"])
-df = get_existing_data(repo, st.secrets["CSV_PATH"])
+# --- Load GitHub secrets ---
+GITHUB_TOKEN = st.secrets["GITHUB_TOKEN"]
+REPO_NAME = st.secrets["REPO_NAME"]
+CSV_PATH = st.secrets["CSV_PATH"]
+
+# --- Authenticate with GitHub ---
+@st.cache_data(ttl=300)
+def load_csv_from_github():
+    try:
+        g = Github(GITHUB_TOKEN)
+        repo = g.get_repo(REPO_NAME)
+        file_content = repo.get_contents(CSV_PATH)
+        csv_string = file_content.decoded_content.decode("utf-8")
+        df = pd.read_csv(StringIO(csv_string))
+        return df
+    except Exception as e:
+        st.error(f"Error loading data: {e}")
+        return None
+
+# --- Load and display the data ---
+df = load_csv_from_github()
 
 st.title("📊 View All Protein CCS Data")
 st.markdown("This page loads the current dataset and lets you explore and plot CCS information interactively.")
