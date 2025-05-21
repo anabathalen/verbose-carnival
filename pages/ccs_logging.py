@@ -114,6 +114,8 @@ def get_repository(g, repo_name):
 
 def get_existing_data_from_github(repo, path):
     """Download and parse existing CSV data from GitHub."""
+    st.write("🔍 get_existing_data_from_github() called")  # Add this line
+    
     try:
         file_content = repo.get_contents(path)
         csv_str = file_content.decoded_content.decode('utf-8')
