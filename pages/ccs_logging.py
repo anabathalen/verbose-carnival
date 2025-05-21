@@ -8,8 +8,6 @@ from io import StringIO
 
 # --- Helper Functions ---
 
-import re
-
 def validate_doi(doi):
     """Validate DOI format using regex."""
     doi_pattern = r'^10\.\d{4,9}/[-._;()/:A-Z0-9]+$'
@@ -31,10 +29,8 @@ def check_doi_exists(existing_data, doi):
         st.info("Existing data is empty or missing a DOI column.")
         return False
 
-    # Normalize input
     normalized_doi = normalize_doi(str(doi))
 
-    # Show raw and normalized DOI entries
     st.markdown("### 🔍 Debugging DOI Check")
     st.write("**Raw DOIs in database:**")
     st.write(existing_data['doi'])
@@ -60,7 +56,6 @@ def get_paper_details(doi):
             authors_list = data.get('author', [])
             authors = ', '.join([f"{a.get('given','')} {a.get('family','')}".strip() for a in authors_list])
             year = None
-            # Try to get publication year from multiple possible fields
             if 'published-print' in data:
                 year = data['published-print'].get("date-parts", [[None]])[0][0]
             elif 'published-online' in data:
@@ -97,8 +92,7 @@ def authenticate_github():
     try:
         token = st.secrets["GITHUB_TOKEN"]
         g = Github(token)
-        # Test authentication by getting user login
-        _ = g.get_user().login
+        _ = g.get_user().login  # Test auth
         return g
     except Exception as e:
         st.error(f"GitHub Authentication error: {e}")
@@ -114,42 +108,26 @@ def get_repository(g, repo_name):
         return None
 
 def get_existing_data_from_github(repo, path):
-    st.write("🔍 get_existing_data_from_github() called AHHH")
     try:
         file_content = repo.get_contents(path)
-        st.write("✅ repo.get_contents() succeeded")
-
         csv_str = file_content.decoded_content.decode('utf-8')
-        st.code(csv_str[:500], language='text')  # Show first 500 characters of CSV content
-
-        df = pd.read_csv(StringIO(csv_str))  # Use io.StringIO here!
-        st.write("✅ pd.read_csv succeeded")
-
-        st.write("📦 Loaded existing data from GitHub:")
-        st.write(df.head())
-        st.write(f"Columns in existing data: {df.columns.tolist()}")
+        df = pd.read_csv(StringIO(csv_str))
         return df
     except Exception as e:
-        st.error(f"❌ Error loading CSV from GitHub: {e}")
+        st.warning(f"Could not load existing data from GitHub: {e}")
         return pd.DataFrame()
 
-
-
 def update_csv_in_github(repo, path, df):
-    """Update CSV file on GitHub with new data."""
-    import base64
+    """Update or create CSV file on GitHub."""
     from io import StringIO
-
     try:
         file = repo.get_contents(path)
-        # Convert dataframe to CSV string
         csv_buffer = StringIO()
         df.to_csv(csv_buffer, index=False)
         new_content = csv_buffer.getvalue()
         repo.update_file(path, f"Update CCS data {datetime.now().isoformat()}", new_content, file.sha)
         return True, "Data successfully updated in GitHub."
-    except GithubException as e:
-        # File might not exist; try to create it
+    except GithubException:
         try:
             csv_buffer = StringIO()
             df.to_csv(csv_buffer, index=False)
@@ -161,32 +139,28 @@ def update_csv_in_github(repo, path, df):
     except Exception as e:
         return False, f"Unexpected error: {e}"
 
-# --- Main Page Function ---
+# --- Main Page ---
 
 def show_data_entry_page():
     st.title("Collision Cross Section Data Entry")
 
-    # Load existing data from GitHub once (cache to avoid repeated calls)
     @st.cache_data(ttl=600)
     def load_existing_data():
         g = authenticate_github()
         if g:
             repo = get_repository(g, st.secrets["REPO_NAME"])
             if repo:
-                df = get_existing_data_from_github(repo, st.secrets["CSV_PATH"])
-                return df
+                return get_existing_data_from_github(repo, st.secrets["CSV_PATH"])
         return pd.DataFrame()
 
     existing_data = load_existing_data()
 
-    # DOI check section
+    # DOI input and check
     with st.expander("DOI Check", expanded=True):
         st.markdown("### Check if paper already exists in database")
         col1, col2 = st.columns([3, 1])
-
         with col1:
             doi = st.text_input("Enter DOI (e.g., 10.1021/example)", key="doi_input")
-
         with col2:
             check_button = st.button("Check DOI")
 
@@ -208,7 +182,7 @@ def show_data_entry_page():
                     st.session_state.paper_details = paper_details
                     st.session_state.protein_data = []
 
-    # Show form if ready
+    # Show protein data form
     if st.session_state.get('show_full_form', False):
         st.header(f"Log Protein Data for Paper: {st.session_state.paper_details['paper_title']}")
 
@@ -268,7 +242,6 @@ def show_data_entry_page():
                     st.session_state.protein_data = []
                 st.session_state.protein_data.append(protein_entry)
 
-                # Ask if more proteins need to be entered
                 more_proteins = st.radio("Do you want to log another protein?", ["Yes", "No"], key=f"more_{len(st.session_state.protein_data)}")
                 if more_proteins == "No":
                     st.session_state.show_full_form = False
@@ -298,30 +271,41 @@ def show_data_entry_page():
                 for protein in st.session_state.protein_data:
                     combined = {
                         **st.session_state.paper_details,
-                        **protein
+                        **protein,
+                        "submission_timestamp": datetime.now().isoformat()
                     }
-                    # Flatten ccs_data tuples into strings or JSON strings (optional)
-                    combined["ccs_data"] = str(protein["ccs_data"])
                     all_proteins.append(combined)
-                df = pd.DataFrame(all_proteins)
-                st.dataframe(df)
 
-                # Push to GitHub
+                new_df = pd.DataFrame(all_proteins)
+
+                # Merge with existing data and remove duplicates by protein_name and doi (keep latest)
+                if not existing_data.empty:
+                    combined_df = pd.concat([existing_data, new_df], ignore_index=True)
+                    combined_df.sort_values("submission_timestamp", ascending=False, inplace=True)
+                    combined_df.drop_duplicates(subset=["protein_name", "doi"], keep="first", inplace=True)
+                else:
+                    combined_df = new_df
+
                 g = authenticate_github()
                 if g:
                     repo = get_repository(g, st.secrets["REPO_NAME"])
                     if repo:
-                        success, message = update_csv_in_github(repo, st.secrets["CSV_PATH"], df)
+                        success, message = update_csv_in_github(repo, st.secrets["CSV_PATH"], combined_df)
                         if success:
                             st.success(message)
-                            # Clear session state after successful submission
+                            # Clear session state to reset form
                             st.session_state.protein_data = []
                             st.session_state.show_full_form = False
                         else:
                             st.error(message)
-                    else:
-                        st.error("Could not access GitHub repository.")
                 else:
-                    st.error("GitHub authentication failed.")
+                    st.error("GitHub authentication failed. Cannot save data.")
 
-show_data_entry_page()
+# Run app
+if __name__ == "__main__":
+    if "show_full_form" not in st.session_state:
+        st.session_state.show_full_form = False
+    if "protein_data" not in st.session_state:
+        st.session_state.protein_data = []
+    show_data_entry_page()
+
