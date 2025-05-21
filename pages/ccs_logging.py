@@ -4,6 +4,7 @@ import re
 import requests
 from datetime import datetime
 from github import Github, GithubException
+from io import StringIO
 
 # --- Helper Functions ---
 
@@ -113,22 +114,25 @@ def get_repository(g, repo_name):
         return None
 
 def get_existing_data_from_github(repo, path):
-    """Download and parse existing CSV data from GitHub."""
-    st.write("🔍 get_existing_data_from_github() called")  # Add this line
-    
+    st.write("🔍 get_existing_data_from_github() called")
     try:
         file_content = repo.get_contents(path)
+        st.write("✅ repo.get_contents() succeeded")
+
         csv_str = file_content.decoded_content.decode('utf-8')
-        df = pd.read_csv(pd.compat.StringIO(csv_str))
+        st.code(csv_str[:500], language='text')  # Show first 500 characters of CSV content
+
+        df = pd.read_csv(StringIO(csv_str))  # Use io.StringIO here!
+        st.write("✅ pd.read_csv succeeded")
 
         st.write("📦 Loaded existing data from GitHub:")
         st.write(df.head())
         st.write(f"Columns in existing data: {df.columns.tolist()}")
-
         return df
     except Exception as e:
-        st.error(f"Error loading CSV from GitHub: {e}")
+        st.error(f"❌ Error loading CSV from GitHub: {e}")
         return pd.DataFrame()
+
 
 
 def update_csv_in_github(repo, path, df):
