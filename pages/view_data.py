@@ -1,8 +1,8 @@
 import pandas as pd
 import streamlit as st
 import plotly.express as px
-from github import Github
-from io import StringIO
+from github import Github as Github
+from io import StringIO as StringIO
 
 # --- Load GitHub secrets ---
 GITHUB_TOKEN = st.secrets["GITHUB_TOKEN"]
