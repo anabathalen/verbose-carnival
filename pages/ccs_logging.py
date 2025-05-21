@@ -146,6 +146,7 @@ def show_data_entry_page():
         return pd.DataFrame()
 
     existing_data = load_existing_data()
+    print(existing data)
 
     # DOI check section
     with st.expander("DOI Check", expanded=True):
