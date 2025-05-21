@@ -30,6 +30,9 @@ def check_doi_exists(existing_data, doi):
         return False
     normalized_doi = normalize_doi(str(doi))  # Force to string here
     normalized_existing = set(normalize_doi(str(x)) for x in existing_data['doi'].dropna())  # And here
+    st.write(existing_data['doi'].apply(lambda x: normalize_doi(str(x))))
+    st.write("Normalized input DOI:", normalize_doi(str(doi)))
+
     return normalized_doi in normalized_existing
 
 def get_paper_details(doi):
