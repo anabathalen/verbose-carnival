@@ -17,11 +17,3 @@ with st.sidebar:
     key="page_selection",
     index = 0 if st.session_state.page == "Welcome" else 1
   )
-    
-  # Update session state with the selected page
-  st.session_state.page = selected_page
-
-if st.session_state.page == "Welcome":
-  show_welcome_page()
-elif st.session_state.page == "Data Visualisation":
-  show_data_visualisation_page()
