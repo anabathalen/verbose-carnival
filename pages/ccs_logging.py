@@ -280,9 +280,5 @@ def show_data_entry_page():
                 else:
                     st.error("GitHub authentication failed.")
 
-# Run the app page function
-if __name__ == "__main__":
-    if "show_full_form" not in st.session_state:
-        st.session_state.show_full_form = False
-    show_data_entry_page()
+show_data_entry_page()
 
