@@ -25,15 +25,29 @@ def normalize_doi(doi):
     return doi
 
 def check_doi_exists(existing_data, doi):
-    """Check if normalized DOI already exists in the dataframe."""
+    """Check if normalized DOI already exists in the dataframe, with debug output."""
     if existing_data is None or existing_data.empty or 'doi' not in existing_data.columns:
+        st.info("Existing data is empty or missing a DOI column.")
         return False
-    normalized_doi = normalize_doi(str(doi))  # Force to string here
-    normalized_existing = set(normalize_doi(str(x)) for x in existing_data['doi'].dropna())  # And here
-    st.write(existing_data['doi'].apply(lambda x: normalize_doi(str(x))))
-    st.write("Normalized input DOI:", normalize_doi(str(doi)))
 
-    return normalized_doi in normalized_existing
+    # Normalize input
+    normalized_doi = normalize_doi(str(doi))
+
+    # Show raw and normalized DOI entries
+    st.markdown("### 🔍 Debugging DOI Check")
+    st.write("**Raw DOIs in database:**")
+    st.write(existing_data['doi'])
+
+    normalized_existing = set(normalize_doi(str(x)) for x in existing_data['doi'].dropna())
+    st.write("**Normalized DOIs in database:**")
+    st.write(list(normalized_existing))
+
+    st.write("**Normalized input DOI:**", normalized_doi)
+
+    exists = normalized_doi in normalized_existing
+    st.write("**Match found?**", exists)
+
+    return exists
 
 def get_paper_details(doi):
     """Fetch paper details from CrossRef API."""
