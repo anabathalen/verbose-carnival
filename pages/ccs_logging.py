@@ -10,13 +10,25 @@ from github import Github, GithubException
 def validate_doi(doi):
     """Validate DOI format using regex."""
     doi_pattern = r'^10\.\d{4,9}/[-._;()/:A-Z0-9]+$'
-    return re.match(doi_pattern, doi, re.IGNORECASE) is not None
+    return re.match(doi_pattern, doi.strip(), re.IGNORECASE) is not None
+
+def normalize_doi(doi):
+    """Normalize DOI by stripping whitespace, lowercasing, and removing 'https://doi.org/' if present."""
+    if not isinstance(doi, str):
+        return ""
+    doi = doi.strip().lower()
+    if doi.startswith("https://doi.org/"):
+        doi = doi.replace("https://doi.org/", "")
+    return doi
 
 def check_doi_exists(existing_data, doi):
-    """Check if DOI already exists in the dataframe."""
+    """Check if normalized DOI already exists in the dataframe."""
     if existing_data is None or existing_data.empty:
         return False
-    return doi in existing_data['doi'].values
+    normalized_doi = normalize_doi(doi)
+    existing_dois = [normalize_doi(x) for x in existing_data['doi'].dropna()]
+    return normalized_doi in existing_dois
+
 
 def get_paper_details(doi):
     """Fetch paper details from CrossRef API."""
