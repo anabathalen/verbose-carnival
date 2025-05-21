@@ -118,9 +118,16 @@ def get_existing_data_from_github(repo, path):
         file_content = repo.get_contents(path)
         csv_str = file_content.decoded_content.decode('utf-8')
         df = pd.read_csv(pd.compat.StringIO(csv_str))
+
+        st.write("📦 Loaded existing data from GitHub:")
+        st.write(df.head())
+        st.write(f"Columns in existing data: {df.columns.tolist()}")
+
         return df
-    except Exception:
+    except Exception as e:
+        st.error(f"Error loading CSV from GitHub: {e}")
         return pd.DataFrame()
+
 
 def update_csv_in_github(repo, path, df):
     """Update CSV file on GitHub with new data."""
