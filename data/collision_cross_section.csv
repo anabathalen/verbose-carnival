@@ -1,1 +1,5 @@
-
+paper_title,authors,doi,publication_year,journal,protein_name,instrument,ims_type,drift_gas,uniprot,pdb,sequence,sequence_mass,measured_mass,native_measurement,subunit_count,oligomer_type,ccs_data,additional_notes
+ExoCarta: A compendium of exosomal proteins and RNA,"Suresh Mathivanan, Richard J. Simpson",10.1002/pmic.200900351,2009,PROTEOMICS,dgfdfghfdgh,Waters Synapt,TWIMS,Nitrogen,dfghdfgh,fghdfg,dfghdfghdfghdfgh,12.0,13.0,No,3,,"[(1, 0.0)]",
+ExoCarta: A compendium of exosomal proteins and RNA,"Suresh Mathivanan, Richard J. Simpson",10.1002/pmic.200900351,2009,PROTEOMICS,dgfdfghfdgh,Waters Synapt,TWIMS,Nitrogen,dfghdfgh,fghdfg,dfghdfghdfghdfgh,12.0,13.0,No,3,Homo-oligomer,"[(1, 0.0), (1, 0.0), (1, 0.0), (1, 0.0)]",
+ExoCarta: A compendium of exosomal proteins and RNA,"Suresh Mathivanan, Richard J. Simpson",10.1002/pmic.200900351,2009,PROTEOMICS,dgfdfghfdgh,Waters Synapt,TWIMS,Nitrogen,dfghdfgh,fghdfg,dfghdfghdfghdfgh,12.0,13.0,No,3,Homo-oligomer,"[(6, 567.0), (7, 567.0), (8, 678.0), (9, 789.0)]",
+ExoCarta: A compendium of exosomal proteins and RNA,"Suresh Mathivanan, Richard J. Simpson",10.1002/pmic.200900351,2009,PROTEOMICS,dgfdfghfdgh,Waters Synapt,TWIMS,Nitrogen,dfghdfgh,fghdfg,dfghdfghdfghdfgh,12.0,13.0,No,3,Homo-oligomer,"[(6, 567.0), (7, 567.0), (8, 678.0), (9, 789.0)]",ghjfghjf
