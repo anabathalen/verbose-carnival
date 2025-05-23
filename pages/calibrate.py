@@ -50,7 +50,7 @@ with st.expander("Help it isn't working :("):
 
 # Read the bush.csv file from the same folder as calibrant.py
 def read_bush_csv():
-    calibrant_file_path = os.path.join(os.path.dirname(__file__), 'data/bush.csv')
+    calibrant_file_path = os.path.join(os.path.dirname(__file__), '../data/bush.csv')
     if os.path.exists(calibrant_file_path):
         bush_df = pd.read_csv(calibrant_file_path)
     else:
