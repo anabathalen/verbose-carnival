@@ -125,3 +125,5 @@ def generate_input_dat_files_app():
                     file_name="sample_dat_files.zip",
                     mime="application/zip"
                 )
+
+generate_input_dat_files_app()
