@@ -11,8 +11,7 @@ st.header("Process Calibrant Data")
 st.write("Use this page to fit the ATDs of your calbrants and generate a reference file for IMSCal and/or a csv file of calibrant measured and literature arrival times. This is designed for use with denatured calibrants, so the fitting only allows for a single peak for each ATD - consider another tool if your ATDs are not gaussian-y.")
 st.write("To start, make a folder for each calibrant you used. You should name these folders according to the table below (or they won't match the bush database file). Within each folder, make a text file for each charge state (called e.g. '1.txt', '2.txt' etc.) and paste the corresponding ATD from MassLynx into each file. Remember to have the x-axis set to ms not bins! Zip these folders together and upload it below.")
 
-names = [{'Denatured Myoglobin':'myoglobin'}, {'Denatured Cytochrome C': 'cytochromeC'}, {'Polyalanine Peptide of Length X': 'PolyalanineX'}]
-st.table(names)
+names = [{'Protein':['Denatured Myoglobin, Denatured Cytochrome C, Polyalanine Peptide of Length X, Denatured Ubiquitin']}, {'Folder Name':['myoglobin', 'cytochrome c', 'polyalanineX', 'ubiquitin'] }]
 
 # Function to handle ZIP file upload and extract folder names
 def handle_zip_upload(uploaded_file):
