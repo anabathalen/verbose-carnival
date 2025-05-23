@@ -218,3 +218,5 @@ def calibrate_page():
             file_name="calibration_data.dat",
             mime="text/plain"
         )
+
+calibrate_page()
