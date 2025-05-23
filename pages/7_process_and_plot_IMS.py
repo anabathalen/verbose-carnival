@@ -184,4 +184,4 @@ def plot_and_scale_page():
         fig_buffer.seek(0)
         st.download_button("Download CCS Plot as PNG", data=fig_buffer, file_name="ccs_plot.png", mime="image/png", key="ccs_download")
 
-plot_and_scale_page():
+plot_and_scale_page()
