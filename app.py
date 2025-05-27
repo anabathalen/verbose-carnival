@@ -7,7 +7,7 @@ import requests
 
 # Page config for professional look
 st.set_page_config(
-    page_title="Home",
+    page_title="Barran Group CCS Tools",
     page_icon="🧪",
     layout="wide"
 )
@@ -53,7 +53,7 @@ with feedback_section:
             try:
                 # Load GitHub credentials
                 GITHUB_TOKEN = st.secrets["GITHUB_TOKEN"]
-                REPO_NAME = st.secrets["GITHUB_REPO"]
+                GITHUB_REPO = st.secrets["REPO_NAME"]
 
                 # Constants
                 CSV_PATH = "data/feedback.csv"
@@ -72,7 +72,7 @@ with feedback_section:
                     "Accept": "application/vnd.github+json"
                 }
 
-                response = requests.get(API_URL, headers=headers, params={"ref": GITHUB_BRANCH})
+                response = requests.get(API_URL, headers=headers)
                 if response.status_code == 200:
                     content_json = response.json()
                     sha = content_json["sha"]
@@ -91,8 +91,7 @@ with feedback_section:
 
                 payload = {
                     "message": "Add user feedback",
-                    "content": encoded_content,
-                    "branch": GITHUB_BRANCH
+                    "content": encoded_content
                 }
                 if sha:
                     payload["sha"] = sha
@@ -111,3 +110,4 @@ st.markdown(
     "<style>.css-1lsmgbg.e1fqkh3o3 {visibility: hidden;} </style>",
     unsafe_allow_html=True
 )
+
