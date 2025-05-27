@@ -53,7 +53,9 @@ with feedback_section:
 
     if submit:
         # Ensure feedback.csv exists
-        csv_path = "feedback.csv"
+        csv_path = os.path.join("data", "feedback.csv")
+        os.makedirs("data", exist_ok=True)
+
         new_entry = {
             "timestamp": datetime.now().isoformat(),
             "name": name.strip() if name else "Anonymous",
@@ -62,7 +64,7 @@ with feedback_section:
         # Append to CSV
         if os.path.exists(csv_path):
             df = pd.read_csv(csv_path)
-            df = df.append(new_entry, ignore_index=True)
+            df = pd.concat([df, pd.DataFrame([new_entry])], ignore_index=True)
         else:
             df = pd.DataFrame([new_entry])
         df.to_csv(csv_path, index=False)
