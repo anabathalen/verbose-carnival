@@ -51,9 +51,9 @@ with guide:
             "ccs logging",
             "view data",
             "calibrate",
-            "get input files"
-            "process output files"
-            "process and plot IMS"
+            "get input files",
+            "process output files",
+            "process and plot IMS",
             "fit major peaks"
         ],
         "Description": [
@@ -62,8 +62,8 @@ with guide:
             "View logged CCS values (and leaderboard!)",
             "Process calibrant data and export to IMSCal reference file and/or csv.",
             "Generate IMSCal input files from ATDs and masses.",
-            "Process IMSCal output files to get arrival time ⇒ CCS conversions for your proteins."
-            "Use arrival time ⇒ CCS conversions from 'process output files' to process and plot IMS data."
+            "Process IMSCal output files to get arrival time ⇒ CCS conversions for your proteins.",
+            "Use arrival time ⇒ CCS conversions from 'process output files' to process and plot IMS data.",
             "Fits major peaks in your data according to inputted parameters."
         ]
     }
