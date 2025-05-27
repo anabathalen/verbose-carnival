@@ -55,7 +55,7 @@ with feedback_section:
         csv_path = "feedback.csv"
         new_entry = {
             "timestamp": datetime.now().isoformat(),
-            "name": name.replace("\n", " ")
+            "name": name.replace("\n", " "),
             "feedback": feedback.replace("\n", " ")
         }
         # Append to CSV
