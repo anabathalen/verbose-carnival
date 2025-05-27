@@ -8,7 +8,7 @@ from io import StringIO
 
 # Page config for professional look
 st.set_page_config(
-    page_title="Barran Group CCS Tools",
+    page_title="Home",
     page_icon="🧪",
     layout="wide"
 )
@@ -31,19 +31,19 @@ body = st.container()
 feedback_section = st.container()
 
 with header:
-    st.title("Barran Group CCS Logging & Calibration Tools")
+    st.title("Barran Group CCS Logging & Calibration Tools 🧰")
     st.markdown("---")
 
 with body:
     st.write("Welcome! This site hosts tools for logging protein CCS values and processing IM-MS data.")
-    st.write("Feel free to explore the tools in the sidebar and provide feedback below!")
+    st.write("Please use the tools in the sidebar and provide feedback below!")
     st.info("⚠️ This is a work in progress. Please sanity check all results before use.")
 
 with feedback_section:
     st.markdown("---")
     st.header("User Feedback")
 
-    name = st.text_input("Your name (optional):", max_chars=50)
+    name = st.text_input("Name:", max_chars=50)
     feedback = st.text_area("Share your feedback or suggestions:", height=150)
     submit = st.button("Submit Feedback")
 
@@ -91,7 +91,7 @@ with feedback_section:
                 encoded_content = base64.b64encode(updated_csv.encode()).decode()
 
                 payload = {
-                    "message": "Add user feedback",
+                    "message": "Added user feedback",
                     "content": encoded_content
                 }
                 if sha:
