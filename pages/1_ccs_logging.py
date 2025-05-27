@@ -519,32 +519,37 @@ def show_data_entry_page():
         
             for i, protein in enumerate(st.session_state.protein_data):
                 with st.expander(f"Protein {i+1}: {protein['protein_name']}", expanded=False):
-                    col0, col1, col2 = st.columns([0.2, 1, 1])
-                    with col0:
+                    row = st.columns([5, 1])  # Wide column for data, narrow column for checkbox
+                    with row[0]:
+                        col1, col2 = st.columns([1, 1])
+                        with col1:
+                            st.markdown(f"**User:** {protein['user_name']}")
+                            st.markdown(f"**Instrument:** {protein['instrument']}")
+                            st.markdown(f"**IMS Type:** {protein['ims_type']}")
+                            st.markdown(f"**Drift Gas:** {protein['drift_gas']}")
+                            st.markdown(f"**Mode:** {protein['ionization_mode']}")
+                        with col2:
+                            st.markdown(f"**Native:** {protein['native_measurement']}")
+                            st.markdown(f"**Subunits:** {protein['subunit_count']}")
+                            if protein['oligomer_type']:
+                                st.markdown(f"**Oligomer:** {protein['oligomer_type']}")
+                        
+                        st.markdown("**CCS Values:**")
+                        for charge, ccs in protein['ccs_data']:
+                            st.markdown(f"- Charge {charge}: {ccs} Å²")
+                        
+                        if protein['additional_notes']:
+                            st.markdown(f"**Notes:** {protein['additional_notes']}")
+                    
+                    with row[1]:
+                        st.markdown("### ")
                         st.session_state.selected_proteins[i] = st.checkbox(
-                            "✅", 
+                            "✅ Keep",
                             value=st.session_state.selected_proteins[i],
                             key=f"select_protein_{i}",
-                            help="Check to include this protein in the final submission"
+                            help="Uncheck to exclude this protein from submission"
                         )
-                    with col1:
-                        st.markdown(f"**User:** {protein['user_name']}")
-                        st.markdown(f"**Instrument:** {protein['instrument']}")
-                        st.markdown(f"**IMS Type:** {protein['ims_type']}")
-                        st.markdown(f"**Drift Gas:** {protein['drift_gas']}")
-                        st.markdown(f"**Mode:** {protein['ionization_mode']}")
-                    with col2:
-                        st.markdown(f"**Native:** {protein['native_measurement']}")
-                        st.markdown(f"**Subunits:** {protein['subunit_count']}")
-                        if protein['oligomer_type']:
-                            st.markdown(f"**Oligomer:** {protein['oligomer_type']}")
-        
-                    st.markdown("**CCS Values:**")
-                    for charge, ccs in protein['ccs_data']:
-                        st.markdown(f"- Charge {charge}: {ccs} Å²")
-        
-                    if protein['additional_notes']:
-                        st.markdown(f"**Notes:** {protein['additional_notes']}")
+
         
             col1, col2, col3 = st.columns([1, 1, 1])
             with col1:
