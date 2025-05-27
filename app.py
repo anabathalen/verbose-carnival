@@ -36,7 +36,7 @@ with body:
     st.write(
         "Welcome! This site hosts tools for logging protein CCS values and processing IM-MS data."
     )
-        st.write(
+    st.write(
         "Please use the tools in the sidebar and provide feedback below!"
     )
     st.info(
