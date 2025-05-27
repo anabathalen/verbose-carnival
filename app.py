@@ -53,8 +53,7 @@ with feedback_section:
             try:
                 # Load GitHub credentials
                 GITHUB_TOKEN = st.secrets["GITHUB_TOKEN"]
-                GITHUB_REPO = st.secrets["GITHUB_REPO"]
-                GITHUB_BRANCH = st.secrets["GITHUB_BRANCH"]
+                REPO_NAME = st.secrets["GITHUB_REPO"]
 
                 # Constants
                 CSV_PATH = "data/feedback.csv"
