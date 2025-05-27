@@ -8,8 +8,8 @@ from io import StringIO
 
 # === PAGE CONFIGURATION ===
 st.set_page_config(
-    page_title="CCS Data Entry",
-    page_icon="🧬",
+    page_title="CCS Logging",
+    page_icon="📝",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -92,6 +92,7 @@ st.markdown("""
         background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
         border-left-color: #667eea;
         border: 1px solid #cbd5e1;
+        padding: 1.5rem;
     }
     
     .form-section {
@@ -384,8 +385,8 @@ def show_data_entry_page():
     # Header
     st.markdown("""
     <div class="main-header">
-        <h1>🧬 CCS Data Entry Platform</h1>
-        <p>Contribute collision cross-section data to advance proteomics research</p>
+        <h1>Protein CCS Logging Form</h1>
+        <p>Contribute collision cross-section data from papers to help build our database!</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -404,7 +405,7 @@ def show_data_entry_page():
     # Main content
     # Step 1: DOI Verification
     st.markdown("---")
-    st.markdown('<h2 class="section-header">📄 Step 1: Paper Verification</h2>', unsafe_allow_html=True)
+    st.markdown('<h2 class="section-header">Step 1: DOI Verification</h2>', unsafe_allow_html=True)
     
     st.markdown("""
     <div class="info-card">
@@ -418,7 +419,7 @@ def show_data_entry_page():
         doi = st.text_input(
             "📝 Enter DOI", 
             placeholder="e.g., 10.1021/acs.jproteome.2023.example",
-            help="Digital Object Identifier - usually found on the paper's first page"
+            help="Digital Object Identifier"
         )
     with col2:
         st.markdown("<br>", unsafe_allow_html=True)
@@ -477,11 +478,11 @@ def show_data_entry_page():
     # Step 2: Protein Data Entry
     if st.session_state.get('show_full_form', False):
         st.markdown("---")
-        st.markdown('<h2 class="section-header">🧬 Step 2: Protein Data Entry</h2>', unsafe_allow_html=True)
+        st.markdown('<h2 class="section-header">Step 2: Protein Data Entry</h2>', unsafe_allow_html=True)
         
         with st.form("protein_form", clear_on_submit=False):
             st.markdown("---")
-            st.markdown("#### 👤 Researcher Information")
+            st.markdown("#### ⚙️ General Information")
             
             col1, col2 = st.columns(2)
             with col1:
@@ -492,14 +493,14 @@ def show_data_entry_page():
             
             with col2:
                 protein_name = st.text_input(
-                    "Protein/Ion Name", 
+                    "Protein Name", 
                     placeholder="e.g., Cytochrome C, Ubiquitin",
                     help="Enter the name of the protein or ion studied"
                 )
             st.markdown('</div>', unsafe_allow_html=True)
 
             st.markdown("---")
-            st.markdown("#### ⚗️ Experimental Setup")
+            st.markdown("#### 👩‍🔬 Experimental Setup")
             
             col1, col2 = st.columns(2)
             with col1:
@@ -537,7 +538,7 @@ def show_data_entry_page():
             col1, col2 = st.columns(2)
             with col1:
                 uniprot_id = st.text_input("UniProt ID", placeholder="e.g., P12345")
-                sequence_mass_value = st.number_input("Sequence Mass (Da)", min_value=0.0, value=0.0, format="%.2f")
+                sequence_mass_value = st.number_input("Sequence Mass or Best Approximation (Da)", min_value=0.0, value=0.0, format="%.2f")
                 protein_sequence = st.text_area("Protein Sequence", placeholder="Enter amino acid sequence...")
             
             with col2:
@@ -688,10 +689,10 @@ def show_data_entry_page():
                             st.markdown(f"**💨 Drift Gas:** {protein['drift_gas']}")
                         with col_b:
                             st.markdown(f"**⚡ Mode:** {protein['ionization_mode']}")
-                            st.markdown(f"**🧪 Native:** {protein['native_measurement']}")
+                            st.markdown(f"**🧪 Native?:** {protein['native_measurement']}")
                             st.markdown(f"**🔗 Subunits:** {protein['subunit_count']}")
                             if protein['oligomer_type']:
-                                st.markdown(f"**🧬 Type:** {protein['oligomer_type']}")
+                                st.markdown(f"**Protein Type:** {protein['oligomer_type']}")
                         
                         # CCS values with badges
                         st.markdown("**📊 CCS Values:**")
