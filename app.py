@@ -17,6 +17,7 @@ st.markdown(
     .css-1d391kg {padding-top: 1rem;}  /* Reduce top padding */
     .css-hi6a2p {padding: 0 1rem;}    /* Reduce side padding */
     .stButton>button {background-color: #4CAF50; color: white;} /* Green submit button */
+    .stTextArea>div>div>textarea {font-size: 16px;} /* Text area styling */
     </style>
     """, unsafe_allow_html=True
 )
@@ -46,7 +47,7 @@ with body:
 with feedback_section:
     st.markdown("---")
     st.header("Feedback")
-    name = st.text_area("Name:")
+    name = st.text_input("Name:")
     feedback = st.text_area("Share your feedback or suggestions:", height=150)
     submit = st.button("Submit Feedback")
 
@@ -55,7 +56,7 @@ with feedback_section:
         csv_path = "feedback.csv"
         new_entry = {
             "timestamp": datetime.now().isoformat(),
-            "name": name.replace("\n", " "),
+            "name": name.strip() if name else "Anonymous",
             "feedback": feedback.replace("\n", " ")
         }
         # Append to CSV
