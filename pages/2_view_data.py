@@ -77,26 +77,6 @@ def load_csv_from_github():
         st.error(f"❌ Error loading data from GitHub: {e}")
         return None
 
-# === DATA PROCESSING ===
-def flatten_ccs_data(df):
-    """Flatten nested CCS data for plotting"""
-    flat_rows = []
-    for _, row in df.iterrows():
-        ccs_list = row.get("ccs_data", [])
-        if isinstance(ccs_list, str):
-            try:
-                ccs_list = eval(ccs_list)
-            except:
-                continue
-        
-        for charge, ccs in ccs_list:
-            flat_row = row.drop(labels=["ccs_data"]).to_dict()
-            flat_row["charge"] = charge
-            flat_row["ccs"] = ccs
-            flat_rows.append(flat_row)
-    
-    return pd.DataFrame(flat_rows)
-
 # === MAIN PAGE ===
 def main():
     # Header
@@ -135,7 +115,7 @@ def main():
         # Display filtered data
         if not show_all:
             # Show only key columns
-            key_columns = ["protein_name", "user_name", "timestamp", "ccs_data"]
+            key_columns = ["protein_name", "user_name", "entry_date", "charge_state","ccs_value"]
             available_columns = [col for col in key_columns if col in display_df.columns]
             display_df = display_df[available_columns]
         
@@ -154,7 +134,7 @@ def main():
         st.markdown('<h2 class="section-header">Interactive CCS Visualization</h2>', unsafe_allow_html=True)
         
         # Flatten the data for plotting
-        flat_df = flatten_ccs_data(df)
+        flat_df = df
         
         if flat_df.empty:
             st.warning("⚠️ No CCS data available for plotting.")
@@ -179,9 +159,9 @@ def main():
         with col2:
             numeric_columns = flat_df.select_dtypes(include=["float64", "int64"]).columns.tolist()
             x_axis = st.selectbox("📊 X-axis", options=numeric_columns, 
-                                index=numeric_columns.index("charge") if "charge" in numeric_columns else 0)
+                                index=numeric_columns.index("charge_state") if "charge_state" in numeric_columns else 0)
             y_axis = st.selectbox("📊 Y-axis", options=numeric_columns,
-                                index=numeric_columns.index("ccs") if "ccs" in numeric_columns else 1)
+                                index=numeric_columns.index("ccs_value") if "ccs_value" in numeric_columns else 1)
         
         with col3:
             color_by = st.selectbox("🎨 Color by", options=[None] + categorical_columns)
