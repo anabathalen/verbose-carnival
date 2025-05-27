@@ -332,16 +332,13 @@ def show_data_entry_page():
             with col1:
                 user_name = st.selectbox("Your Name", [
                     "Select your name...",
-                    "Alice Johnson",
-                    "Bob Smith", 
-                    "Charlie Brown",
-                    "Diana Prince",
-                    "Eva Martinez",
-                    "Frank Wilson",
-                    "Grace Lee",
-                    "Henry Davis",
-                    "Iris Chen",
-                    "Jack Taylor"
+                    "Ana",
+                    "Perdi", 
+                    "Tom",
+                    "Hari",
+                    "Wei",
+                    "Jason",
+                    "Charlie"
                 ], key="user_name")
             
             with col2:
@@ -503,10 +500,21 @@ def show_data_entry_page():
         # Show entered data review
         if st.session_state.get('protein_data', []):
             st.markdown('<h2 class="section-header">📋 Review Entered Data</h2>', unsafe_allow_html=True)
-            
+        
+            # Initialize selection list if it doesn't exist
+            if 'selected_proteins' not in st.session_state:
+                st.session_state.selected_proteins = [True] * len(st.session_state.protein_data)
+        
             for i, protein in enumerate(st.session_state.protein_data):
                 with st.expander(f"Protein {i+1}: {protein['protein_name']}", expanded=False):
-                    col1, col2 = st.columns([1, 1])
+                    col0, col1, col2 = st.columns([0.2, 1, 1])
+                    with col0:
+                        st.session_state.selected_proteins[i] = st.checkbox(
+                            "✅", 
+                            value=st.session_state.selected_proteins[i],
+                            key=f"select_protein_{i}",
+                            help="Check to include this protein in the final submission"
+                        )
                     with col1:
                         st.markdown(f"**User:** {protein['user_name']}")
                         st.markdown(f"**Instrument:** {protein['instrument']}")
@@ -518,65 +526,74 @@ def show_data_entry_page():
                         st.markdown(f"**Subunits:** {protein['subunit_count']}")
                         if protein['oligomer_type']:
                             st.markdown(f"**Oligomer:** {protein['oligomer_type']}")
-                    
+        
                     st.markdown("**CCS Values:**")
                     for charge, ccs in protein['ccs_data']:
                         st.markdown(f"- Charge {charge}: {ccs} Å²")
-                    
+        
                     if protein['additional_notes']:
                         st.markdown(f"**Notes:** {protein['additional_notes']}")
-
+        
             col1, col2, col3 = st.columns([1, 1, 1])
             with col1:
                 if st.button("➕ Add Another Protein", use_container_width=True):
-                    # Keep form open for another entry
-                    pass
-            
+                    pass  # Keep form open for new entry
+        
             with col2:
                 if st.button("🗑️ Clear All Data", use_container_width=True):
                     st.session_state.protein_data = []
+                    st.session_state.selected_proteins = []
                     st.rerun()
-            
+        
             with col3:
                 submit_all = st.button("✅ Submit All Data", use_container_width=True)
-
+        
             if submit_all:
                 with st.spinner("Submitting data to GitHub..."):
-                    all_proteins = []
-                    for protein in st.session_state.protein_data:
-                        combined = {
-                            **st.session_state.paper_details,
-                            **protein,
-                            "submission_timestamp": datetime.now().isoformat()
-                        }
-                        all_proteins.append(combined)
-
-                    new_df = pd.DataFrame(all_proteins)
-
-                    # Merge with existing data
-                    if not existing_data.empty:
-                        combined_df = pd.concat([existing_data, new_df], ignore_index=True)
-                        combined_df.sort_values("submission_timestamp", ascending=False, inplace=True)
-                        combined_df.drop_duplicates(subset=["protein_name", "doi"], keep="first", inplace=True)
+                    selected_proteins = [
+                        protein for protein, selected in zip(st.session_state.protein_data, st.session_state.selected_proteins) if selected
+                    ]
+        
+                    if not selected_proteins:
+                        st.warning("⚠️ Please select at least one protein to submit.")
                     else:
-                        combined_df = new_df
+                        all_proteins = []
+                        for protein in selected_proteins:
+                            combined = {
+                                **st.session_state.paper_details,
+                                **protein,
+                                "submission_timestamp": datetime.now().isoformat()
+                            }
+                            all_proteins.append(combined)
+        
+                        new_df = pd.DataFrame(all_proteins)
+        
+                        # Merge with existing data
+                        if not existing_data.empty:
+                            combined_df = pd.concat([existing_data, new_df], ignore_index=True)
+                            combined_df.sort_values("submission_timestamp", ascending=False, inplace=True)
+                            combined_df.drop_duplicates(subset=["protein_name", "doi"], keep="first", inplace=True)
+                        else:
+                            combined_df = new_df
+        
+                        g = authenticate_github()
+                        if g:
+                            repo = get_repository(g, st.secrets["REPO_NAME"])
+                            if repo:
+                                success, message = update_csv_in_github(repo, st.secrets["CSV_PATH"], combined_df)
+                                if success:
+                                    st.success(f"🎉 {message}")
+                                    st.balloons()
+                                    # Clear session state
+                                    st.session_state.protein_data = []
+                                    st.session_state.selected_proteins = []
+                                    st.session_state.show_full_form = False
+                                    st.rerun()
+                                else:
+                                    st.error(f"❌ {message}")
+                        else:
+                            st.error("❌ GitHub authentication failed. Cannot save data.")
 
-                    g = authenticate_github()
-                    if g:
-                        repo = get_repository(g, st.secrets["REPO_NAME"])
-                        if repo:
-                            success, message = update_csv_in_github(repo, st.secrets["CSV_PATH"], combined_df)
-                            if success:
-                                st.success(f"🎉 {message}")
-                                st.balloons()
-                                # Clear session state
-                                st.session_state.protein_data = []
-                                st.session_state.show_full_form = False
-                                st.rerun()
-                            else:
-                                st.error(f"❌ {message}")
-                    else:
-                        st.error("❌ GitHub authentication failed. Cannot save data.")
 
 # Run app
 if __name__ == "__main__":
