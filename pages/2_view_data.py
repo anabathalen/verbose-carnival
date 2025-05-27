@@ -87,6 +87,26 @@ if df is not None and not df.empty:
         file_name="ccs_plot.png",
         mime="image/png"
     )
+    # === Leaderboard ===
+    st.subheader("🏆 Leaderboard: Most Proteins Logged")
+
+    # Count proteins per user
+    user_counts = df["user_name"].value_counts().reset_index()
+    user_counts.columns = ["User", "Proteins Logged"]
+
+    # Add medals for top 3
+    medals = ["🥇", "🥈", "🥉"]
+    user_counts["Medal"] = ""
+    for i in range(min(3, len(user_counts))):
+        user_counts.loc[i, "Medal"] = medals[i]
+
+    # Combine name + medal
+    user_counts["User"] = user_counts["Medal"] + " " + user_counts["User"]
+    user_counts.drop(columns=["Medal"], inplace=True)
+
+    # Display leaderboard
+    st.table(user_counts)
+
 else:
     st.warning("No data found in the GitHub CSV.")
 
