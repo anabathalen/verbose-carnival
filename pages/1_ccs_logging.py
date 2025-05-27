@@ -26,10 +26,13 @@ st.markdown(
     
     /* Clean title styling */
     .main-title {
-        color: #1f2937;
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        padding: 1rem;
+        color: white;
         font-size: 2.2rem;
         font-weight: 600;
         margin-bottom: 1rem;
+        text-align: center;
     }
     
     /* Section headers */
