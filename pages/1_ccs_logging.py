@@ -504,6 +504,18 @@ def show_data_entry_page():
             # Initialize selection list if it doesn't exist
             if 'selected_proteins' not in st.session_state:
                 st.session_state.selected_proteins = [True] * len(st.session_state.protein_data)
+
+            # Ensure selected_proteins is correctly initialized and sized
+            if "selected_proteins" not in st.session_state:
+                st.session_state.selected_proteins = [True] * len(st.session_state.protein_data)
+            else:
+                # Extend or truncate to match protein_data length
+                diff = len(st.session_state.protein_data) - len(st.session_state.selected_proteins)
+                if diff > 0:
+                    st.session_state.selected_proteins.extend([True] * diff)
+                elif diff < 0:
+                    st.session_state.selected_proteins = st.session_state.selected_proteins[:len(st.session_state.protein_data)]
+
         
             for i, protein in enumerate(st.session_state.protein_data):
                 with st.expander(f"Protein {i+1}: {protein['protein_name']}", expanded=False):
