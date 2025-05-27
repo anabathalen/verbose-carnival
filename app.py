@@ -28,7 +28,7 @@ body = st.container()
 feedback_section = st.container()
 
 with header:
-    st.title("Barran Group CCS Logging & Calibration Tools 🧰🛠️")
+    st.title("Barran Group CCS Logging & Calibration Tools 🧰")
     st.markdown(
         "---"
     )
