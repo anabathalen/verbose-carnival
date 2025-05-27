@@ -28,6 +28,7 @@ st.markdown(
 # Main layout containers
 header = st.container()
 body = st.container()
+guide = st.container()
 feedback_section = st.container()
 
 with header:
@@ -38,6 +39,41 @@ with body:
     st.write("Welcome! This site hosts tools for logging protein CCS values and processing IM-MS data.")
     st.write("Please use the tools in the sidebar and provide feedback below!")
     st.info("⚠️ This is a work in progress. Please sanity check all results before use.")
+
+with guide:
+    st.markdown("---")
+    st.write("This site is split into pages (see sidebar) - use the table below to find the pages you need.")
+
+    # Define your guide table data
+    guide_data = {
+        "Page Name": [
+            "app",
+            "ccs logging",
+            "view data",
+            "calibrate",
+            "get input files"
+            "process output files"
+            "process and plot IMS"
+            "fit major peaks"
+        ],
+        "Description": [
+            "Home page and feedback.",
+            "Log protein CCS values from papers.",
+            "View logged CCS values (and leaderboard!)",
+            "Process calibrant data and export to IMSCal reference file and/or csv.",
+            "Generate IMSCal input files from ATDs and masses.",
+            "Process IMSCal output files to get arrival time ⇒ CCS conversions for your proteins."
+            "Use arrival time ⇒ CCS conversions from 'process output files' to process and plot IMS data."
+            "Fits major peaks in your data according to inputted parameters."
+        ]
+    }
+    
+    guide = pd.DataFrame(guide_data)
+    
+    # Display the guide table in Streamlit
+    st.markdown("## Site Guide")
+    st.table(guide)
+
 
 with feedback_section:
     st.markdown("---")
