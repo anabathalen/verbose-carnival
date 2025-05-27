@@ -52,24 +52,35 @@ with feedback_section:
     submit = st.button("Submit Feedback")
 
     if submit:
-        # Ensure feedback.csv exists
-        csv_path = os.path.join("data", "feedback.csv")
-        os.makedirs("data", exist_ok=True)
-
-        new_entry = {
-            "timestamp": datetime.now().isoformat(),
-            "name": name.strip() if name else "Anonymous",
-            "feedback": feedback.replace("\n", " ")
-        }
-        # Append to CSV
-        if os.path.exists(csv_path):
-            df = pd.read_csv(csv_path)
-            df = pd.concat([df, pd.DataFrame([new_entry])], ignore_index=True)
+        if not feedback.strip():
+            st.warning("Please enter some feedback before submitting.")
         else:
-            df = pd.DataFrame([new_entry])
-        df.to_csv(csv_path, index=False)
-
-        st.success("Thanks for your feedback! It has been recorded.")
+            # Define file path
+            data_dir = "data"
+            csv_path = os.path.join(data_dir, "feedback.csv")
+    
+            # Make sure data directory exists
+            try:
+                os.makedirs(data_dir, exist_ok=True)
+    
+                # Build entry
+                new_entry = {
+                    "timestamp": datetime.now().isoformat(),
+                    "name": name.strip() if name else "Anonymous",
+                    "feedback": feedback.replace("\n", " ")
+                }
+    
+                # Append to CSV
+                if os.path.exists(csv_path):
+                    df = pd.read_csv(csv_path)
+                    df = pd.concat([df, pd.DataFrame([new_entry])], ignore_index=True)
+                else:
+                    df = pd.DataFrame([new_entry])
+    
+                df.to_csv(csv_path, index=False)
+                st.success("Thanks for your feedback! It has been recorded.")
+            except Exception as e:
+                st.error(f"An error occurred while saving your feedback: {e}")
 
 # Hide Streamlit footer
 st.markdown(
