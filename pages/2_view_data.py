@@ -114,17 +114,6 @@ def main():
         st.error("❌ No data available. Please check your GitHub configuration.")
         return
     
-    # Sidebar summary
-    with st.sidebar:
-        st.markdown("### 📊 Dataset Summary")
-        st.metric("Total Proteins", len(df))
-        st.metric("Unique Users", df["user_name"].nunique())
-        
-        if "timestamp" in df.columns:
-            df["timestamp"] = pd.to_datetime(df["timestamp"], errors='coerce')
-            latest_entry = df["timestamp"].max()
-            st.metric("Latest Entry", latest_entry.strftime("%Y-%m-%d") if pd.notna(latest_entry) else "N/A")
-    
     # Main content tabs
     tab1, tab2, tab3, tab4 = st.tabs(["📋 Data Overview", "📈 Interactive Plots", "🏆 Leaderboard", "📊 Statistics"])
     
