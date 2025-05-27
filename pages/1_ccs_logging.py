@@ -401,31 +401,9 @@ def show_data_entry_page():
 
     existing_data = load_existing_data()
 
-    # Sidebar with progress and stats
-    with st.sidebar:
-        st.markdown("### 📊 Database Stats")
-        if not existing_data.empty:
-            st.metric("Total Proteins", len(existing_data))
-            st.metric("Unique Papers", existing_data['doi'].nunique() if 'doi' in existing_data.columns else 0)
-            st.metric("Contributors", existing_data['user_name'].nunique() if 'user_name' in existing_data.columns else 0)
-        
-        st.markdown("### 📋 Progress Steps")
-        step1_complete = st.session_state.get('show_full_form', False)
-        step2_complete = len(st.session_state.get('protein_data', [])) > 0
-        
-        steps = [
-            ("1", "DOI Check", step1_complete),
-            ("2", "Add Proteins", step2_complete),
-            ("3", "Submit Data", False)
-        ]
-        
-        for num, label, complete in steps:
-            status_class = "completed" if complete else ("active" if not complete and (num == "1" or step1_complete) else "")
-            st.markdown(f'<div class="progress-step {status_class}">{num}</div> {label}', unsafe_allow_html=True)
-
     # Main content
     # Step 1: DOI Verification
-    st.markdown('<div class="section-card">', unsafe_allow_html=True)
+    st.markdown("---")
     st.markdown('<h2 class="section-header">📄 Step 1: Paper Verification</h2>', unsafe_allow_html=True)
     
     st.markdown("""
@@ -498,11 +476,11 @@ def show_data_entry_page():
 
     # Step 2: Protein Data Entry
     if st.session_state.get('show_full_form', False):
-        st.markdown('<div class="section-card">', unsafe_allow_html=True)
+        st.markdown("---")
         st.markdown('<h2 class="section-header">🧬 Step 2: Protein Data Entry</h2>', unsafe_allow_html=True)
         
         with st.form("protein_form", clear_on_submit=False):
-            st.markdown('<div class="form-section">', unsafe_allow_html=True)
+            st.markdown("---")
             st.markdown("#### 👤 Researcher Information")
             
             col1, col2 = st.columns(2)
@@ -520,7 +498,7 @@ def show_data_entry_page():
                 )
             st.markdown('</div>', unsafe_allow_html=True)
 
-            st.markdown('<div class="form-section">', unsafe_allow_html=True)
+            st.markdown("---")
             st.markdown("#### ⚗️ Experimental Setup")
             
             col1, col2 = st.columns(2)
@@ -553,7 +531,7 @@ def show_data_entry_page():
                 ])
             st.markdown('</div>', unsafe_allow_html=True)
 
-            st.markdown('<div class="form-section">', unsafe_allow_html=True)
+            st.markdown("---")
             st.markdown("#### 🏷️ Protein Identifiers (Optional)")
             
             col1, col2 = st.columns(2)
@@ -568,7 +546,7 @@ def show_data_entry_page():
                 additional_notes = st.text_area("Additional Notes", placeholder="Sample preparation, instrument settings, etc.")
             st.markdown('</div>', unsafe_allow_html=True)
 
-            st.markdown('<div class="form-section">', unsafe_allow_html=True)
+            st.markdown("---")
             st.markdown("#### 🔬 Measurement Details")
             
             col1, col2 = st.columns(2)
@@ -584,7 +562,7 @@ def show_data_entry_page():
                     ])
             st.markdown('</div>', unsafe_allow_html=True)
 
-            st.markdown('<div class="form-section">', unsafe_allow_html=True)
+            st.markdown("---")
             st.markdown("#### 📊 CCS Values")
             
             if ionization_mode not in ["Select mode...", ""]:
@@ -668,7 +646,7 @@ def show_data_entry_page():
 
         # Step 3: Review and Submit
         if st.session_state.get('protein_data', []):
-            st.markdown('<div class="section-card">', unsafe_allow_html=True)
+            st.markdown("---")
             st.markdown('<h2 class="section-header">📋 Step 3: Review & Submit</h2>', unsafe_allow_html=True)
             
             # Initialize selection list
