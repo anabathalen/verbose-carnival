@@ -1,17 +1,74 @@
 import streamlit as st
 import pandas as pd
 import os
+from datetime import datetime
 
-# This is the home page content
-st.title("Welcome to My Multi-Page Streamlit App")
+# Page config for professional look
+st.set_page_config(
+    page_title="Home",
+    page_icon="🧪",
+    layout="wide"
+)
 
-st.write("This is the main page. Use the menu on the left to navigate to other pages.")
+# Custom CSS to clean default Streamlit styling
+st.markdown(
+    """
+    <style>
+    .css-1d391kg {padding-top: 1rem;}  /* Reduce top padding */
+    .css-hi6a2p {padding: 0 1rem;}    /* Reduce side padding */
+    .stButton>button {background-color: #4CAF50; color: white;} /* Green submit button */
+    .stTextArea>div>div>textarea {font-family: 'Arial'; font-size: 16px;} /* Text area styling */
+    </style>
+    """, unsafe_allow_html=True
+)
 
-st.write("Loaded secrets:")
-st.write(st.secrets.keys())
+# Main layout containers
+header = st.container()
+body = st.container()
+feedback_section = st.container()
 
-# Optional: print the token length (not the token itself!)
-if "GITHUB_TOKEN" in st.secrets:
-    st.success(f"GITHUB_TOKEN loaded (length: {len(st.secrets['GITHUB_TOKEN'])})")
-else:
-    st.error("GITHUB_TOKEN is missing in secrets.")
+with header:
+    st.title("Barran Group CCS Logging & Calibration Tools")
+    st.markdown(
+        "---"
+    )
+
+with body:
+    st.write(
+        "Welcome! This site hosts tools for logging protein CCS values and processing IM-MS data."
+    )
+    st.info(
+        "⚠️ This is a work in progress. Please sanity check all results before use."
+    )
+    st.write(
+        "Feel free to explore the tools in the sidebar and provide feedback below!"
+    )
+
+with feedback_section:
+    st.markdown("---")
+    st.header("User Feedback")
+    feedback = st.text_area("Share your feedback or suggestions:", height=150)
+    submit = st.button("Submit Feedback")
+
+    if submit:
+        # Ensure feedback.csv exists
+        csv_path = "feedback.csv"
+        new_entry = {
+            "timestamp": datetime.now().isoformat(),
+            "feedback": feedback.replace("\n", " ")
+        }
+        # Append to CSV
+        if os.path.exists(csv_path):
+            df = pd.read_csv(csv_path)
+            df = df.append(new_entry, ignore_index=True)
+        else:
+            df = pd.DataFrame([new_entry])
+        df.to_csv(csv_path, index=False)
+
+        st.success("Thanks for your feedback! It has been recorded.")
+
+# Hide Streamlit footer
+st.markdown(
+    "<style>.css-1lsmgbg.e1fqkh3o3 {visibility: hidden;} </style>",
+    unsafe_allow_html=True
+)
