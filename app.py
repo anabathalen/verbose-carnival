@@ -4,6 +4,7 @@ import os
 from datetime import datetime
 import base64
 import requests
+from io import StringIO 
 
 # Page config for professional look
 st.set_page_config(
@@ -77,7 +78,7 @@ with feedback_section:
                     content_json = response.json()
                     sha = content_json["sha"]
                     decoded_content = base64.b64decode(content_json["content"]).decode("utf-8")
-                    df = pd.read_csv(pd.compat.StringIO(decoded_content))
+                    df = pd.read_csv(StringIO(decoded_content))
                     df = pd.concat([df, pd.DataFrame([new_entry])], ignore_index=True)
                 elif response.status_code == 404:
                     sha = None
