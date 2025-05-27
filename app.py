@@ -17,7 +17,6 @@ st.markdown(
     .css-1d391kg {padding-top: 1rem;}  /* Reduce top padding */
     .css-hi6a2p {padding: 0 1rem;}    /* Reduce side padding */
     .stButton>button {background-color: #4CAF50; color: white;} /* Green submit button */
-    .stTextArea>div>div>textarea {font-family: 'Arial'; font-size: 16px;} /* Text area styling */
     </style>
     """, unsafe_allow_html=True
 )
@@ -28,7 +27,7 @@ body = st.container()
 feedback_section = st.container()
 
 with header:
-    st.title("Barran Group CCS Logging & Calibration Tools")
+    st.title("Barran Group CCS Logging & Calibration Tools 🧰🛠️")
     st.markdown(
         "---"
     )
@@ -37,16 +36,17 @@ with body:
     st.write(
         "Welcome! This site hosts tools for logging protein CCS values and processing IM-MS data."
     )
+        st.write(
+        "Please use the tools in the sidebar and provide feedback below!"
+    )
     st.info(
         "⚠️ This is a work in progress. Please sanity check all results before use."
-    )
-    st.write(
-        "Feel free to explore the tools in the sidebar and provide feedback below!"
     )
 
 with feedback_section:
     st.markdown("---")
-    st.header("User Feedback")
+    st.header("Feedback")
+    name = st.text_area("Name:")
     feedback = st.text_area("Share your feedback or suggestions:", height=150)
     submit = st.button("Submit Feedback")
 
@@ -55,6 +55,7 @@ with feedback_section:
         csv_path = "feedback.csv"
         new_entry = {
             "timestamp": datetime.now().isoformat(),
+            "name": name.replace("\n", " ")
             "feedback": feedback.replace("\n", " ")
         }
         # Append to CSV
