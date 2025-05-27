@@ -8,7 +8,7 @@ from io import StringIO
 # === PAGE CONFIGURATION ===
 st.set_page_config(
     page_title="CCS Data Explorer",
-    page_icon="🧬",
+    page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -102,8 +102,8 @@ def main():
     # Header
     st.markdown("""
     <div class="main-header">
-        <h1>🧬 CCS Data Explorer</h1>
-        <p>Interactive visualization and analysis of protein collision cross-section data</p>
+        <h1>CCS Data Explorer</h1>
+        <p>Interactive visualization of compiled protein collision cross-section data.</p>
     </div>
     """, unsafe_allow_html=True)
     
