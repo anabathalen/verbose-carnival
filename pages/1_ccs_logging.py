@@ -92,7 +92,8 @@ st.markdown("""
         background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
         border-left-color: #667eea;
         border: 1px solid #cbd5e1;
-        margin: 1rem 0;
+        padding: 1.5rem;
+        margin: 1.5rem 0;
     }
     
     .form-section {
