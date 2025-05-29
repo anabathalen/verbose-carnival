@@ -118,13 +118,13 @@ guide = st.container()
 feedback_section = st.container()
 
 with header:
-    st.markdown('<h1 class="main-title">Barran Group CCS Logging and Processing Tools</h1>', unsafe_allow_html=True)
+    st.markdown('<h1 class="main-title">!!NAME!! CCS Logging and Processing Tools</h1>', unsafe_allow_html=True)
     st.markdown("---")
 
 with body:
     st.markdown("""
     <div class="info-box">
-        <p><strong>Welcome!</strong> This site hosts tools for logging protein CCS values and processing IM-MS data.</p>
+        <p><strong>Welcome!</strong> This site hosts tools for logging protein CCS values and processing IM-MS data. Some stuff about why we are doing this (expanding on beveridge paper, deveoping compendium of protein CCS values hoping to understand how structure links to CCS more closely.) Building on McLean/Bush - but protein data is harder, is it native? </p>
         <p>Please use the tools in the sidebar and provide feedback below!</p>
     </div>
     """, unsafe_allow_html=True)
