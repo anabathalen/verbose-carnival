@@ -5,6 +5,7 @@ import requests
 from datetime import datetime
 from github import Github, GithubException
 from io import StringIO
+import hashlib
 
 # === PAGE CONFIGURATION ===
 st.set_page_config(
@@ -43,6 +44,33 @@ st.markdown("""
         margin: 0.5rem 0 0 0;
         opacity: 0.9;
         font-size: 1.1rem;
+    }
+    
+    .login-card {
+        background: white;
+        padding: 2rem;
+        border-radius: 16px;
+        border: 1px solid #e2e8f0;
+        margin: 2rem auto;
+        max-width: 400px;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        text-align: center;
+    }
+    
+    .login-header {
+        color: #667eea;
+        font-size: 1.8rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+    
+    .user-info {
+        background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+        padding: 1rem;
+        border-radius: 10px;
+        border-left: 4px solid #22c55e;
+        margin: 1rem 0;
+        text-align: center;
     }
     
     .section-card {
@@ -158,6 +186,23 @@ st.markdown("""
         box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
     }
     
+    /* Logout button styling */
+    .logout-btn {
+        background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 0.4rem 1rem;
+        font-weight: 500;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .logout-btn:hover {
+        background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%);
+    }
+    
     /* Form Input Styling */
     .stTextInput > div > div > input,
     .stTextArea > div > div > textarea,
@@ -229,6 +274,108 @@ st.markdown("""
     .css-1lsmgbg.e1fqkh3o3 {display: none;}
 </style>
 """, unsafe_allow_html=True)
+
+# === AUTHENTICATION FUNCTIONS ===
+
+def hash_password(password):
+    """Hash password using SHA-256."""
+    return hashlib.sha256(password.encode()).hexdigest()
+
+def load_user_credentials():
+    """Load user credentials from Streamlit secrets."""
+    try:
+        # Expected format in secrets:
+        # [users]
+        # usernames = ["user1", "user2", "user3"]
+        # passwords = ["hash1", "hash2", "hash3"]  # Pre-hashed passwords
+        usernames = st.secrets["users"]["usernames"]
+        passwords = st.secrets["users"]["passwords"]
+        
+        if len(usernames) != len(passwords):
+            st.error("Mismatch between usernames and passwords in secrets!")
+            return {}
+            
+        return dict(zip(usernames, passwords))
+    except Exception as e:
+        st.error(f"Error loading user credentials: {e}")
+        st.info("Please ensure your secrets.toml contains [users] section with 'usernames' and 'passwords' lists")
+        return {}
+
+def authenticate_user(username, password):
+    """Authenticate user credentials."""
+    credentials = load_user_credentials()
+    if not credentials:
+        return False
+    
+    hashed_password = hash_password(password)
+    return credentials.get(username) == hashed_password
+
+def show_login_form():
+    """Display login form."""
+    st.markdown("""
+    <div class="main-header">
+        <h1>🔐 CCS Database Login</h1>
+        <p>Please log in to access the protein CCS logging system</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("""
+    <div class="login-card">
+        <div class="login-header">Sign In</div>
+        <p style="color: #64748b; margin-bottom: 1.5rem;">Enter your credentials to continue</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Get available usernames for dropdown
+    credentials = load_user_credentials()
+    available_usernames = list(credentials.keys()) if credentials else []
+    
+    if not available_usernames:
+        st.error("No user accounts configured. Please contact your administrator.")
+        return False
+    
+    with st.form("login_form"):
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            username = st.selectbox("Username", ["Select username..."] + available_usernames)
+            password = st.text_input("Password", type="password", placeholder="Enter your password")
+            
+            login_button = st.form_submit_button("🚀 Sign In", use_container_width=True)
+            
+            if login_button:
+                if username == "Select username...":
+                    st.error("Please select a username")
+                elif not password:
+                    st.error("Please enter your password")
+                elif authenticate_user(username, password):
+                    st.session_state.authenticated = True
+                    st.session_state.current_user = username
+                    st.success("Login successful! Redirecting...")
+                    st.rerun()
+                else:
+                    st.error("Invalid credentials. Please try again.")
+    
+    return False
+
+def show_user_info():
+    """Display current user info and logout button."""
+    if st.session_state.get('authenticated', False):
+        col1, col2 = st.columns([4, 1])
+        with col1:
+            st.markdown(f"""
+            <div class="user-info">
+                <strong>👤 Logged in as: {st.session_state.current_user}</strong>
+            </div>
+            """, unsafe_allow_html=True)
+        with col2:
+            if st.button("🚪 Logout"):
+                st.session_state.authenticated = False
+                st.session_state.current_user = None
+                # Clear all other session state
+                for key in list(st.session_state.keys()):
+                    if key not in ['authenticated', 'current_user']:
+                        del st.session_state[key]
+                st.rerun()
 
 # === HELPER FUNCTIONS ===
 
@@ -383,6 +530,9 @@ def convert_protein_data_to_dataframe(protein_data_list, paper_details):
 # === MAIN APPLICATION ===
 
 def show_data_entry_page():
+    # Show user info and logout button
+    show_user_info()
+    
     # Header
     st.markdown("""
     <div class="main-header">
@@ -487,10 +637,22 @@ def show_data_entry_page():
             
             col1, col2 = st.columns(2)
             with col1:
-                user_name = st.selectbox("Your Name", [
-                    "Select your name...",
-                    "Ana", "Perdi", "Tom", "Hari", "Wei", "Jason", "Charlie"
-                ], help="Select your name from the dropdown")
+                # Use current logged-in user as default
+                current_user = st.session_state.get('current_user', '')
+                credentials = load_user_credentials()
+                available_usernames = list(credentials.keys()) if credentials else [current_user]
+                
+                # Set current user as default selection
+                default_index = 0
+                if current_user in available_usernames:
+                    default_index = available_usernames.index(current_user)
+                
+                user_name = st.selectbox(
+                    "Username", 
+                    available_usernames,
+                    index=default_index,
+                    help="Select username for this entry"
+                )
             
             with col2:
                 protein_name = st.text_input(
@@ -585,15 +747,13 @@ def show_data_entry_page():
                 ccs_data = []
             st.markdown('</div>', unsafe_allow_html=True)
 
-            # Submit button
-            submit_protein = st.form_submit_button("➕ Add Protein Data", use_container_width=True)
-
-            if submit_protein:
+            # Form submission
+            submit_button = st.form_submit_button("➕ Add Protein Entry", use_container_width=True)
+            
+            if submit_button:
                 # Validation
                 errors = []
-                if user_name == "Select your name...":
-                    errors.append("Please select your name")
-                if not protein_name.strip():
+                if not protein_name:
                     errors.append("Protein name is required")
                 if instrument == "Select instrument...":
                     errors.append("Please select an instrument")
@@ -604,221 +764,132 @@ def show_data_entry_page():
                 if ionization_mode == "Select mode...":
                     errors.append("Please select ionization mode")
                 if not ccs_data or all(ccs == 0.0 for _, ccs in ccs_data):
-                    errors.append("Please enter at least one CCS value")
-
+                    errors.append("Please enter at least one valid CCS value")
+                
                 if errors:
                     for error in errors:
-                        st.markdown(f"""
-                        <div class="error-card">
-                            <strong>❌ {error}</strong>
-                        </div>
-                        """, unsafe_allow_html=True)
+                        st.error(f"❌ {error}")
                 else:
+                    # Create protein entry
                     protein_entry = {
-                        "user_name": user_name,
-                        "protein_name": protein_name,
-                        "instrument": instrument,
-                        "ims_type": ims_type,
-                        "drift_gas": drift_gas,
-                        "ionization_mode": ionization_mode,
-                        "uniprot": uniprot_id if uniprot_id else None,
-                        "pdb": pdb_id if pdb_id else None,
-                        "sequence": protein_sequence if protein_sequence else None,
-                        "sequence_mass": sequence_mass_value if sequence_mass_value > 0 else None,
-                        "measured_mass": measured_mass_value if measured_mass_value > 0 else None,
-                        "native_measurement": native_measurement,
-                        "subunit_count": subunit_count,
-                        "oligomer_type": oligomer_type if oligomer_type and oligomer_type != "Not applicable" else None,
-                        "ccs_data": ccs_data,
-                        "additional_notes": additional_notes
+                        'user_name': user_name,
+                        'protein_name': protein_name,
+                        'instrument': instrument,
+                        'ims_type': ims_type,
+                        'drift_gas': drift_gas,
+                        'ionization_mode': ionization_mode,
+                        'native_measurement': native_measurement,
+                        'subunit_count': subunit_count,
+                        'oligomer_type': oligomer_type if subunit_count > 1 else "",
+                        'uniprot': uniprot_id,
+                        'pdb': pdb_id,
+                        'sequence': protein_sequence,
+                        'sequence_mass': sequence_mass_value if sequence_mass_value > 0 else None,
+                        'measured_mass': measured_mass_value if measured_mass_value > 0 else None,
+                        'additional_notes': additional_notes,
+                        'ccs_data': [(int(charge), float(ccs)) for charge, ccs in ccs_data if ccs > 0]
                     }
                     
+                    # Add to session state
                     if 'protein_data' not in st.session_state:
                         st.session_state.protein_data = []
                     st.session_state.protein_data.append(protein_entry)
                     
-                    st.markdown("""
-                    <div class="success-card">
-                        <strong>✅ Protein data added successfully!</strong><br>
-                        You can add more proteins or proceed to review and submit.
-                    </div>
-                    """, unsafe_allow_html=True)
+                    st.success(f"✅ Protein '{protein_name}' added successfully!")
+                    st.rerun()
 
-        st.markdown('</div>', unsafe_allow_html=True)
-
-        # Step 3: Review and Submit
+        # Display added proteins
         if st.session_state.get('protein_data', []):
             st.markdown("---")
-            st.markdown('<h2 class="section-header">📋 Step 3: Review & Submit</h2>', unsafe_allow_html=True)
-            
-            # Initialize selection list
-            if 'selected_proteins' not in st.session_state:
-                st.session_state.selected_proteins = [True] * len(st.session_state.protein_data)
-            else:
-                diff = len(st.session_state.protein_data) - len(st.session_state.selected_proteins)
-                if diff > 0:
-                    st.session_state.selected_proteins.extend([True] * diff)
-                elif diff < 0:
-                    st.session_state.selected_proteins = st.session_state.selected_proteins[:len(st.session_state.protein_data)]
-
-            st.markdown(f"**Review your {len(st.session_state.protein_data)} protein entries:**")
-            
-            # Select/Deselect all buttons
-            col1, col2 = st.columns(2)
-            with col1:
-                if st.button("✅ Select All"):
-                    st.session_state.selected_proteins = [True] * len(st.session_state.protein_data)
-                    st.experimental_rerun()
-            with col2:
-                if st.button("❌ Deselect All"):
-                    st.session_state.selected_proteins = [False] * len(st.session_state.protein_data)
-                    st.experimental_rerun()
+            st.markdown('<h3 class="section-header">📝 Added Protein Entries</h3>', unsafe_allow_html=True)
             
             for i, protein in enumerate(st.session_state.protein_data):
-                with st.expander(f"🧬 Protein {i+1}: {protein['protein_name']}", expanded=False):
-                    col1, col2 = st.columns([5, 1])
-                    
+                with st.expander(f"🧬 {protein['protein_name']} ({len(protein['ccs_data'])} charge states)"):
+                    col1, col2 = st.columns(2)
                     with col1:
-                        st.markdown('<div class="protein-card">', unsafe_allow_html=True)
-                        
-                        # Basic info
-                        col_a, col_b = st.columns(2)
-                        with col_a:
-                            st.markdown(f"**👤 User:** {protein['user_name']}")
-                            st.markdown(f"**⚗️ Instrument:** {protein['instrument']}")
-                            st.markdown(f"**🔬 IMS Type:** {protein['ims_type']}")
-                            st.markdown(f"**💨 Drift Gas:** {protein['drift_gas']}")
-                        with col_b:
-                            st.markdown(f"**⚡ Mode:** {protein['ionization_mode']}")
-                            st.markdown(f"**🧪 Native?:** {protein['native_measurement']}")
-                            st.markdown(f"**🔗 Subunits:** {protein['subunit_count']}")
-                            if protein['oligomer_type']:
-                                st.markdown(f"**Protein Type:** {protein['oligomer_type']}")
-                        
-                        # CCS values with badges
-                        st.markdown("**📊 CCS Values:**")
-                        ccs_badges = ""
-                        for charge, ccs in protein['ccs_data']:
-                            ccs_badges += f'<span class="metric-badge">+{charge}: {ccs} Ų</span>'
-                        st.markdown(ccs_badges, unsafe_allow_html=True)
-                        
-                        if protein['additional_notes']:
-                            st.markdown(f"**📝 Notes:** {protein['additional_notes']}")
-                        
-                        st.markdown('</div>', unsafe_allow_html=True)
-                    
+                        st.write(f"**User:** {protein['user_name']}")
+                        st.write(f"**Instrument:** {protein['instrument']}")
+                        st.write(f"**IMS Type:** {protein['ims_type']}")
+                        st.write(f"**Drift Gas:** {protein['drift_gas']}")
+                        st.write(f"**Ionization Mode:** {protein['ionization_mode']}")
                     with col2:
-                        st.markdown("### ")
-                        st.session_state.selected_proteins[i] = st.checkbox(
-                            "Include",
-                            value=st.session_state.selected_proteins[i],
-                            key=f"protein_select_{i}"
-                        )
-            
-            # Summary and submit
-            selected_count = sum(st.session_state.selected_proteins)
-            st.markdown(f"**📊 Summary: {selected_count} of {len(st.session_state.protein_data)} proteins selected for submission**")
-            
-            if selected_count > 0:
-                st.markdown("""
-                <div class="info-card">
-                    <strong>🚀 Ready to Submit</strong><br>
-                    Your selected protein data will be added to the CCS database and made available to the research community.
-                </div>
-                """, unsafe_allow_html=True)
-                
-                col1, col2 = st.columns([2, 1])
-                with col1:
-                    if st.button("🎯 Submit Selected Data to Database", use_container_width=True):
-                        # Filter selected proteins
-                        selected_proteins = [
-                            protein for i, protein in enumerate(st.session_state.protein_data) 
-                            if st.session_state.selected_proteins[i]
-                        ]
-                        
-                        if selected_proteins:
-                            with st.spinner("Submitting data to GitHub..."):
-                                try:
-                                    # Convert to DataFrame
-                                    new_df = convert_protein_data_to_dataframe(
-                                        selected_proteins, 
-                                        st.session_state.paper_details
-                                    )
-                                    
-                                    # Combine with existing data
-                                    if not existing_data.empty:
-                                        combined_df = pd.concat([existing_data, new_df], ignore_index=True)
-                                    else:
-                                        combined_df = new_df
-                                    
-                                    # Submit to GitHub
-                                    g = authenticate_github()
-                                    if g:
-                                        repo = get_repository(g, st.secrets["REPO_NAME"])
-                                        if repo:
-                                            success, message = update_csv_in_github(repo, st.secrets["CSV_PATH"], combined_df)
-                                            
-                                            if success:
-                                                st.markdown(f"""
-                                                <div class="success-card">
-                                                    <strong>🎉 Success!</strong><br>
-                                                    {message}<br>
-                                                    Successfully submitted {len(selected_proteins)} protein entries with {sum(len(p['ccs_data']) for p in selected_proteins)} CCS measurements.
-                                                </div>
-                                                """, unsafe_allow_html=True)
-                                                
-                                                # Clear session state
-                                                for key in ['protein_data', 'selected_proteins', 'show_full_form', 'paper_details', 'new_doi']:
-                                                    if key in st.session_state:
-                                                        del st.session_state[key]
-                                                
-                                                # Clear cache to refresh data
-                                                st.cache_data.clear()
-                                                
-                                                st.balloons()
-                                                
-                                                if st.button("🔄 Start New Entry"):
-                                                    st.experimental_rerun()
-                                            
-                                            else:
-                                                st.markdown(f"""
-                                                <div class="error-card">
-                                                    <strong>❌ Submission Failed</strong><br>
-                                                    {message}
-                                                </div>
-                                                """, unsafe_allow_html=True)
-                                        else:
-                                            st.error("Could not access GitHub repository")
-                                    else:
-                                        st.error("GitHub authentication failed")
+                        st.write(f"**Native Measurement:** {protein['native_measurement']}")
+                        st.write(f"**Subunit Count:** {protein['subunit_count']}")
+                        if protein['oligomer_type']:
+                            st.write(f"**Oligomer Type:** {protein['oligomer_type']}")
+                        if protein['uniprot']:
+                            st.write(f"**UniProt:** {protein['uniprot']}")
+                        if protein['pdb']:
+                            st.write(f"**PDB:** {protein['pdb']}")
+                    
+                    st.write("**CCS Values:**")
+                    ccs_df = pd.DataFrame(protein['ccs_data'], columns=['Charge State', 'CCS (Ų)'])
+                    st.dataframe(ccs_df, use_container_width=True)
+                    
+                    if st.button(f"🗑️ Remove {protein['protein_name']}", key=f"remove_{i}"):
+                        st.session_state.protein_data.pop(i)
+                        st.rerun()
+
+            # Submit all data
+            st.markdown("---")
+            col1, col2, col3 = st.columns([1, 2, 1])
+            with col2:
+                if st.button("🚀 Submit All Data to Database", use_container_width=True, type="primary"):
+                    if st.session_state.protein_data:
+                        with st.spinner("Submitting data to GitHub..."):
+                            # Convert to DataFrame
+                            new_df = convert_protein_data_to_dataframe(
+                                st.session_state.protein_data, 
+                                st.session_state.paper_details
+                            )
+                            
+                            # Combine with existing data
+                            if not existing_data.empty:
+                                combined_df = pd.concat([existing_data, new_df], ignore_index=True)
+                            else:
+                                combined_df = new_df
+                            
+                            # Submit to GitHub
+                            g = authenticate_github()
+                            if g:
+                                repo = get_repository(g, st.secrets["REPO_NAME"])
+                                if repo:
+                                    success, message = update_csv_in_github(repo, st.secrets["CSV_PATH"], combined_df)
+                                    if success:
+                                        st.success(f"🎉 {message}")
+                                        st.balloons()
                                         
-                                except Exception as e:
-                                    st.markdown(f"""
-                                    <div class="error-card">
-                                        <strong>❌ Unexpected Error</strong><br>
-                                        An error occurred during submission: {str(e)}
-                                    </div>
-                                    """, unsafe_allow_html=True)
-                
-                with col2:
-                    if st.button("🗑️ Clear All Data"):
-                        # Clear session state
-                        for key in ['protein_data', 'selected_proteins', 'show_full_form', 'paper_details', 'new_doi']:
-                            if key in st.session_state:
-                                del st.session_state[key]
-                        st.experimental_rerun()
-            
-            else:
-                st.markdown("""
-                <div class="warning-card">
-                    <strong>⚠️ No Proteins Selected</strong><br>
-                    Please select at least one protein entry to submit to the database.
-                </div>
-                """, unsafe_allow_html=True)
-            
-            st.markdown('</div>', unsafe_allow_html=True)
+                                        # Clear session state
+                                        st.session_state.protein_data = []
+                                        st.session_state.show_full_form = False
+                                        
+                                        # Clear cache to refresh data
+                                        load_existing_data.clear()
+                                        
+                                        st.info("Form has been reset. You can now enter data for a new paper.")
+                                        st.rerun()
+                                    else:
+                                        st.error(f"❌ {message}")
+                                else:
+                                    st.error("❌ Could not access GitHub repository")
+                            else:
+                                st.error("❌ GitHub authentication failed")
+                    else:
+                        st.warning("⚠️ No protein data to submit")
 
-# === RUN APPLICATION ===
+def main():
+    """Main application entry point."""
+    # Initialize session state
+    if 'authenticated' not in st.session_state:
+        st.session_state.authenticated = False
+    if 'current_user' not in st.session_state:
+        st.session_state.current_user = None
+
+    # Authentication check
+    if not st.session_state.authenticated:
+        show_login_form()
+    else:
+        show_data_entry_page()
+
 if __name__ == "__main__":
-    show_data_entry_page()
-
+    main()
