@@ -193,14 +193,6 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# Header
-    st.markdown("""
-    <div class="main-header">
-        <h1>Protein CCS Logging Form</h1>
-        <p>Contribute collision cross-section data from papers to help build our database!</p>
-    </div>
-    """, unsafe_allow_html=True)
-
 # Upload files
 twim_extract_file = st.file_uploader("Upload the TWIM Extract CSV file", type="csv")
 calibration_file = st.file_uploader("Upload the calibration CSV file", type="csv")
