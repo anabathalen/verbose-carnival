@@ -227,7 +227,6 @@ if twim_extract_file and calibration_file:
 
     if 'Z' not in cal_df.columns:
         st.error("Calibration data must include a 'Z' column for charge state.")
-        return
 
     data_type = st.radio("Is your data from a Synapt or Cyclic instrument?", ["Synapt", "Cyclic"])
     charge_state = st.number_input("Enter the charge state of the protein (Z)", min_value=1, max_value=100, step=1)
@@ -243,12 +242,9 @@ if twim_extract_file and calibration_file:
 
         cal_data = cal_df[cal_df["Z"] == charge_state]
         if cal_data.empty:
-            st.error(f"No calibration data found for charge state {charge_state}")
-            return
 
         if "Drift" not in cal_data.columns or "CCS" not in cal_data.columns:
             st.error("Calibration data must include 'Drift' and 'CCS' columns.")
-            return
 
         cal_data["CCS Std.Dev."] = cal_data["CCS Std.Dev."].fillna(0)
         cal_data = cal_data[cal_data["CCS Std.Dev."] <= 0.1 * cal_data["CCS"]]
