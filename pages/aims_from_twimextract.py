@@ -171,6 +171,14 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+# Header
+st.markdown("""
+<div class="main-header">
+    <h1>Plot aIMS/CIU Plot from TWIMExtract Data</h1>
+    <p>Enhanced version with normalization, smoothing, and advanced colorbar customization</p>
+</div>
+""", unsafe_allow_html=True)
+
 # File Upload Section
 with st.container():
     st.markdown('<div class="section-card">', unsafe_allow_html=True)
@@ -222,7 +230,7 @@ if twim_extract_file and calibration_file:
             st.markdown('<div class="status-card error-card">❌ Calibration data must include a "Z" column for charge state.</div>', unsafe_allow_html=True)
             st.stop()
 
-        col1, col2, col3 = st.columns(3)
+        col1, col2, col3, col4 = st.columns(4)
         with col1:
             data_type = st.radio("Instrument Type", ["Synapt", "Cyclic"])
         with col2:
@@ -231,6 +239,12 @@ if twim_extract_file and calibration_file:
             inject_time = None
             if data_type == "Cyclic":
                 inject_time = st.number_input("Injection Time (ms)", min_value=0.0, value=0.0, step=0.1)
+        with col4:
+            # Add CV interpolation multiplier
+            current_cv_count = len(twim_df.columns) - 1  # Subtract 1 for drift time column
+            st.write(f"Current CV points: {current_cv_count}")
+            cv_multiplier = st.number_input("CV Interpolation Multiplier", min_value=1.0, max_value=10.0, value=1.0, step=0.5,
+                                          help=f"Multiply CV points by this factor (e.g., 2.0 = {current_cv_count * 2} points)")
 
         st.markdown('</div>', unsafe_allow_html=True)
 
@@ -252,6 +266,40 @@ if twim_extract_file and calibration_file:
             cal_data["CCS Std.Dev."] = cal_data["CCS Std.Dev."].fillna(0)
             cal_data = cal_data[cal_data["CCS Std.Dev."] <= 0.1 * cal_data["CCS"]]
             cal_data["Drift (ms)"] = cal_data["Drift"] * 1000
+
+            # COLLISION VOLTAGE INTERPOLATION (NEW SECTION)
+            if cv_multiplier > 1.0:
+                # Extract collision voltages and convert to numeric
+                collision_voltages = [float(col) for col in twim_df.columns[1:]]
+                cv_array = np.array(collision_voltages)
+                
+                # Create new interpolated CV points
+                new_cv_count = int(len(collision_voltages) * cv_multiplier)
+                new_cv_array = np.linspace(cv_array.min(), cv_array.max(), new_cv_count)
+                
+                # Interpolate intensities for each drift time
+                interpolated_data = []
+                drift_times = twim_df["Drift Time"].values
+                
+                for i, drift_time in enumerate(drift_times):
+                    if pd.isna(drift_time):
+                        continue
+                    
+                    # Get intensities for this drift time
+                    intensities = twim_df.iloc[i, 1:].values
+                    
+                    # Perform linear interpolation
+                    interp_func = interp1d(cv_array, intensities, kind='linear', 
+                                         bounds_error=False, fill_value=0)
+                    new_intensities = interp_func(new_cv_array)
+                    
+                    # Create row with drift time and new intensities
+                    row = [drift_time] + list(new_intensities)
+                    interpolated_data.append(row)
+                
+                # Create new dataframe with interpolated data
+                new_columns = ['Drift Time'] + [str(cv) for cv in new_cv_array]
+                twim_df = pd.DataFrame(interpolated_data, columns=new_columns)
 
             calibrated_data = []
 
