@@ -186,9 +186,9 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Header
-    st.markdown("""
-    <div class="main-header">
-        <h1>Plot aIMS/CIU Plot from TWIMExtract Data</h1>
-        <p>This is one of the tools I use to plot my data - I hope it is helpful to you!</p>
-    </div>
-    """, unsafe_allow_html=True)
+st.markdown("""
+<div class="main-header">
+    <h1>Plot aIMS/CIU Plot from TWIMExtract Data</h1>
+    <p>This is one of the tools I use to plot my data - I hope it is helpful to you!</p>
+</div>
+""", unsafe_allow_html=True)
