@@ -526,8 +526,8 @@ if "calibrated_array" in st.session_state:
                 c = ax.pcolormesh(X, Y, Z, cmap=color_map, shading='auto', vmin=vmin, vmax=vmax)
 
             # Customize the plot
-            ax.set_xlabel("Collision Voltage", fontsize=font_size)
-            ax.set_ylabel("CCS (Ų)", fontsize=font_size)
+            ax.set_xlabel("Collision Voltage (V)", fontsize=font_size)
+            ax.set_ylabel("CCS (Å)", fontsize=font_size)
             ax.tick_params(labelsize=font_size)
 
             # Style the plot borders
@@ -544,12 +544,12 @@ if "calibrated_array" in st.session_state:
 
             # Add reference lines and labels
             for i in range(num_x_lines):
-                ax.axvline(x=x_values[i], color='white', linestyle='--', linewidth=1, alpha=0.8)
+                ax.axvline(x=x_values[i], color='black', linestyle='--', linewidth=1, alpha=0.8)
                 ax.text(x_values[i], y_max * 0.98, x_labels[i], color='black', 
                        va='top', ha='center', fontsize=font_size)
 
             for i in range(num_y_lines):
-                ax.axhline(y=y_values[i], color='white', linestyle='--', linewidth=1, alpha=0.8)
+                ax.axhline(y=y_values[i], color='black', linestyle='--', linewidth=1, alpha=0.8)
                 ax.text(x_min * 1.02, y_values[i], y_labels[i], color='black', 
                        va='center', ha='left', fontsize=font_size)
 
