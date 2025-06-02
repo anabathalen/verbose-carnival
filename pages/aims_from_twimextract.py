@@ -9,6 +9,7 @@ from io import BytesIO
 from scipy.interpolate import griddata
 from scipy.signal import savgol_filter
 import matplotlib.colors as mcolors
+import seaborn as sns
 
 # === PAGE CONFIGURATION ===
 st.set_page_config(
@@ -40,13 +41,14 @@ st.markdown("""
     .main-header h1 {
         margin: 0;
         font-size: 2.2rem;
-        font-weight: 600;
+        font-weight: 400;
     }
     
     .main-header p {
         margin: 0.5rem 0 0 0;
         opacity: 0.9;
         font-size: 1.1rem;
+        font-weight: 400;
     }
     
     .section-card {
@@ -60,8 +62,8 @@ st.markdown("""
     
     .section-header {
         color: #667eea;
-        font-size: 1.4rem;
-        font-weight: 600;
+        font-size: 1.2rem;
+        font-weight: 400;
         margin-bottom: 1rem;
         border-bottom: 2px solid #667eea;
         padding-bottom: 0.5rem;
@@ -107,7 +109,7 @@ st.markdown("""
         border: none;
         border-radius: 8px;
         padding: 0.6rem 1.5rem;
-        font-weight: 500;
+        font-weight: 400;
         font-size: 1rem;
         transition: all 0.3s ease;
         box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
@@ -143,7 +145,7 @@ st.markdown("""
         background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
         border-radius: 8px;
         padding: 0.5rem;
-        font-weight: 500;
+        font-weight: 400;
         color: #1f2937;
     }
     
@@ -285,23 +287,28 @@ if "calibrated_array" in st.session_state:
         st.markdown('<div class="section-card">', unsafe_allow_html=True)
         st.markdown('<h2 class="section-header">🔧 Data Processing Options</h2>', unsafe_allow_html=True)
         
+        st.subheader("Data Processing Options")
+        
         col1, col2 = st.columns(2)
         
         with col1:
-            st.subheader("Normalization")
-            normalize_data = st.checkbox("Normalize each collision voltage slice to maximum intensity of 1", 
-                                       help="This will normalize each CV slice independently to its maximum value")
+            interpolation_method = st.selectbox("Interpolation Method", 
+                                              ["cubic", "linear", "nearest"],
+                                              help="Method for interpolating between data points")
+            grid_resolution = st.number_input("Grid Resolution", min_value=50, max_value=500, value=200, step=10,
+                                            help="Higher values = smoother finish but slower processing")
         
         with col2:
-            st.subheader("Savitzky-Golay Smoothing")
+            normalize_data = st.checkbox("Normalize each collision voltage slice to maximum intensity of 1", 
+                                       help="This will normalize each CV slice independently to its maximum value")
             apply_smoothing = st.checkbox("Apply Savitzky-Golay smoothing", 
                                         help="Smooth the data to reduce noise")
             
             if apply_smoothing:
-                window_length = st.slider("Window Length", 3, 51, 11, 2, 
-                                        help="Must be odd number. Larger values = more smoothing")
-                poly_order = st.slider("Polynomial Order", 1, min(6, window_length-1), 3, 
-                                     help="Order of polynomial used for smoothing")
+                window_length = st.number_input("Window Length", min_value=3, max_value=51, value=11, step=2,
+                                              help="Must be odd number. Larger values = more smoothing")
+                poly_order = st.number_input("Polynomial Order", min_value=1, max_value=6, value=3,
+                                           help="Order of polynomial used for smoothing")
         
         st.markdown('</div>', unsafe_allow_html=True)
 
@@ -311,27 +318,60 @@ if "calibrated_array" in st.session_state:
         st.markdown('<h2 class="section-header">📊 CIU Heatmap Customization</h2>', unsafe_allow_html=True)
 
         # Basic plot settings
-        st.subheader("🎨 Basic Plot Settings")
+        st.subheader("Basic Plot Settings")
+        
+        # Create custom colormap options including seaborn colorblind palette
+        def create_colorblind_cmap(color_name):
+            """Create a colormap from white to seaborn colorblind color"""
+            colors = sns.color_palette("colorblind")
+            color_dict = {
+                'pink': colors[6],     # Pink from colorblind palette
+                'blue': colors[0],     # Blue
+                'orange': colors[1],   # Orange  
+                'green': colors[2],    # Green
+                'red': colors[3],      # Red
+                'purple': colors[4],   # Purple
+                'brown': colors[5],    # Brown
+                'gray': colors[7],     # Gray
+                'olive': colors[8],    # Olive
+                'cyan': colors[9]      # Cyan
+            }
+            
+            selected_color = color_dict.get(color_name, colors[6])  # Default to pink
+            return mcolors.LinearSegmentedColormap.from_list(
+                f'white_to_{color_name}', ['white', selected_color], N=256
+            )
+        
+        colorblind_options = ['pink', 'blue', 'orange', 'green', 'red', 'purple', 'brown', 'gray', 'olive', 'cyan']
+        
         col1, col2, col3, col4 = st.columns(4)
         
         with col1:
-            color_map = st.selectbox("Color Map", [
-                "viridis", "plasma", "inferno", "cividis", "coolwarm", "magma", 
-                "Blues", "Greens", "Purples", "Oranges", "Reds", "Greens_r", 
-                "Purples_r", "Blues_r", "Oranges_r", "Reds_r", "Spectral", "jet"
-            ])
+            colormap_type = st.selectbox("Colormap Type", ["Standard", "Seaborn Colorblind"])
+            
+            if colormap_type == "Standard":
+                color_map = st.selectbox("Color Map", [
+                    "viridis", "plasma", "inferno", "cividis", "coolwarm", "magma", 
+                    "Blues", "Greens", "Purples", "Oranges", "Reds", "Greens_r", 
+                    "Purples_r", "Blues_r", "Oranges_r", "Reds_r", "Spectral", "jet"
+                ])
+                custom_cmap = None
+            else:
+                colorblind_color = st.selectbox("Colorblind Color", colorblind_options)
+                custom_cmap = create_colorblind_cmap(colorblind_color)
+                color_map = None
         
         with col2:
-            font_size = st.slider("Font Size", 8, 24, 12, 1)
+            font_size = st.number_input("Font Size", min_value=6, max_value=30, value=12, step=1)
         
         with col3:
-            figure_size = st.slider("Figure Size (inches)", 4, 16, 10, 1)
+            figure_size = st.number_input("Figure Size (inches)", min_value=2, max_value=20, value=10, step=1)
         
         with col4:
-            dpi = st.slider("Resolution (DPI)", 100, 1000, 300, 50)
+            dpi = st.number_input("Resolution (DPI)", min_value=50, max_value=1000, value=300, step=50)
 
         # Advanced colorbar settings
-        st.subheader("🌈 Advanced Colorbar Settings")
+        st.subheader("Advanced Colorbar Settings")
         
         col1, col2 = st.columns(2)
         
@@ -340,19 +380,19 @@ if "calibrated_array" in st.session_state:
                                             help="Enable advanced colorbar customization")
             
             if use_custom_colorbar:
-                vmin_percent = st.slider("Minimum intensity threshold (%)", 0, 50, 5, 1,
-                                       help="Values below this % of max will be set to minimum color")
-                vmax_percent = st.slider("Maximum intensity threshold (%)", 50, 100, 95, 1,
-                                       help="Values above this % of max will be set to maximum color")
+                vmin_percent = st.number_input("Minimum intensity threshold (%)", min_value=0, max_value=50, value=5, step=1,
+                                             help="Values below this % of max will be set to minimum color")
+                vmax_percent = st.number_input("Maximum intensity threshold (%)", min_value=50, max_value=100, value=95, step=1,
+                                             help="Values above this % of max will be set to maximum color")
         
         with col2:
             show_colorbar = st.checkbox("Show colorbar", value=True)
             if show_colorbar:
-                colorbar_shrink = st.slider("Colorbar size", 0.3, 1.0, 0.8, 0.05)
-                colorbar_aspect = st.slider("Colorbar aspect ratio", 10, 50, 20, 5)
+                colorbar_shrink = st.number_input("Colorbar size", min_value=0.3, max_value=1.0, value=0.8, step=0.05)
+                colorbar_aspect = st.number_input("Colorbar aspect ratio", min_value=10, max_value=50, value=20, step=5)
 
         # Axis range settings
-        st.subheader("📏 Axis Range Settings")
+        st.subheader("Axis Range Settings")
         
         x_min_default, x_max_default = float(calibrated_array[:, 2].min()), float(calibrated_array[:, 2].max())
         y_min_default, y_max_default = float(calibrated_array[:, 0].min()), float(calibrated_array[:, 0].max())
@@ -370,7 +410,7 @@ if "calibrated_array" in st.session_state:
                 help="Crop the y-axis range")
 
         # Annotation settings
-        st.subheader("📝 Annotations")
+        st.subheader("Annotations")
         
         col1, col2 = st.columns(2)
         
@@ -424,7 +464,6 @@ if "calibrated_array" in st.session_state:
                 filtered_data = df_normalized[["CCS", "Drift Time", "Collision Voltage", "Intensity"]].values
 
             # Create heatmap grid
-            grid_resolution = 200
             grid_x = np.linspace(x_min, x_max, num=grid_resolution)
             grid_y = np.linspace(y_min, y_max, num=grid_resolution)
             X, Y = np.meshgrid(grid_x, grid_y)
@@ -434,7 +473,7 @@ if "calibrated_array" in st.session_state:
                 (filtered_data[:, 2], filtered_data[:, 0]),  # Points (CV, CCS)
                 filtered_data[:, 3],  # Intensity
                 (X, Y),  # Grid
-                method='cubic',
+                method=interpolation_method,
                 fill_value=0
             )
             
@@ -481,37 +520,38 @@ if "calibrated_array" in st.session_state:
                 vmin, vmax = None, None
 
             # Create the heatmap
-            c = ax.pcolormesh(X, Y, Z, cmap=color_map, shading='auto', vmin=vmin, vmax=vmax)
+            if custom_cmap is not None:
+                c = ax.pcolormesh(X, Y, Z, cmap=custom_cmap, shading='auto', vmin=vmin, vmax=vmax)
+            else:
+                c = ax.pcolormesh(X, Y, Z, cmap=color_map, shading='auto', vmin=vmin, vmax=vmax)
 
             # Customize the plot
-            ax.set_xlabel("Collision Voltage", fontsize=font_size, fontweight='bold')
-            ax.set_ylabel("CCS (Ų)", fontsize=font_size, fontweight='bold')
-            ax.tick_params(labelsize=font_size-2)
+            ax.set_xlabel("Collision Voltage", fontsize=font_size)
+            ax.set_ylabel("CCS (Ų)", fontsize=font_size)
+            ax.tick_params(labelsize=font_size)
 
             # Style the plot borders
             for spine in ax.spines.values():
                 spine.set_color('black')
-                spine.set_linewidth(1.5)
+                spine.set_linewidth(1)
 
             # Add colorbar if requested
             if show_colorbar:
                 cbar = plt.colorbar(c, ax=ax, shrink=colorbar_shrink, aspect=colorbar_aspect)
                 intensity_label = "Normalized Intensity" if normalize_data else "Intensity"
-                cbar.set_label(intensity_label, fontsize=font_size, fontweight='bold')
-                cbar.ax.tick_params(labelsize=font_size-2)
+                cbar.set_label(intensity_label, fontsize=font_size)
+                cbar.ax.tick_params(labelsize=font_size)
 
             # Add reference lines and labels
             for i in range(num_x_lines):
-                ax.axvline(x=x_values[i], color='white', linestyle='--', linewidth=2, alpha=0.8)
-                ax.text(x_values[i], y_max * 0.98, x_labels[i], color='white', 
-                       va='top', ha='center', fontsize=font_size-1, fontweight='bold',
-                       bbox=dict(boxstyle="round,pad=0.3", facecolor='black', alpha=0.7))
+                ax.axvline(x=x_values[i], color='white', linestyle='--', linewidth=1, alpha=0.8)
+                ax.text(x_values[i], y_max * 0.98, x_labels[i], color='black', 
+                       va='top', ha='center', fontsize=font_size)
 
             for i in range(num_y_lines):
-                ax.axhline(y=y_values[i], color='white', linestyle='--', linewidth=2, alpha=0.8)
-                ax.text(x_min * 1.02, y_values[i], y_labels[i], color='white', 
-                       va='center', ha='left', fontsize=font_size-1, fontweight='bold',
-                       bbox=dict(boxstyle="round,pad=0.3", facecolor='black', alpha=0.7))
+                ax.axhline(y=y_values[i], color='white', linestyle='--', linewidth=1, alpha=0.8)
+                ax.text(x_min * 1.02, y_values[i], y_labels[i], color='black', 
+                       va='center', ha='left', fontsize=font_size)
 
             plt.tight_layout()
             
@@ -526,7 +566,7 @@ if "calibrated_array" in st.session_state:
     if "current_figure" in st.session_state and "processed_data" in st.session_state:
         with st.container():
             st.markdown('<div class="section-card">', unsafe_allow_html=True)
-            st.markdown('<h2 class="section-header">💾 Download Options</h2>', unsafe_allow_html=True)
+            st.markdown('<h2 class="section-header">Download Options</h2>', unsafe_allow_html=True)
             
             col1, col2, col3 = st.columns(3)
             
@@ -536,7 +576,7 @@ if "calibrated_array" in st.session_state:
                                       columns=["CCS", "Drift Time", "Collision Voltage", "Intensity"])
                 csv = csv_data.to_csv(index=False).encode('utf-8')
                 st.download_button(
-                    "📊 Download Processed CSV",
+                    "Download Processed CSV",
                     data=csv,
                     file_name="calibrated_twim_extract.csv",
                     mime="text/csv",
@@ -549,7 +589,7 @@ if "calibrated_array" in st.session_state:
                 st.session_state["current_figure"].savefig(img_png, format='png', bbox_inches="tight", dpi=dpi)
                 img_png.seek(0)
                 st.download_button(
-                    "🖼️ Download PNG Image",
+                    "Download PNG Image",
                     data=img_png,
                     file_name="ciu_heatmap.png",
                     mime="image/png",
@@ -562,7 +602,7 @@ if "calibrated_array" in st.session_state:
                 st.session_state["current_figure"].savefig(img_svg, format='svg', bbox_inches="tight")
                 img_svg.seek(0)
                 st.download_button(
-                    "📈 Download SVG Image",
+                    "Download SVG Image",
                     data=img_svg,
                     file_name="ciu_heatmap.svg",
                     mime="image/svg+xml",
@@ -575,7 +615,7 @@ if "calibrated_array" in st.session_state:
 with st.container():
     st.markdown('<div class="info-card">', unsafe_allow_html=True)
     st.markdown("""
-    ### 📖 How to Use This Tool
+    ### How to Use This Tool
     
     1. **Upload Files**: Upload your TWIM Extract CSV and calibration CSV files
     2. **Configure Settings**: Select instrument type, charge state, and injection time (if applicable)
@@ -584,11 +624,12 @@ with st.container():
     5. **Generate Plot**: Create your CIU heatmap with all customizations applied
     6. **Download Results**: Save your processed data and publication-ready figures
     
-    **New Features:**
+    **Features:**
     - **Normalization**: Normalize each collision voltage slice to maximum intensity of 1
     - **Savitzky-Golay Smoothing**: Reduce noise with customizable window and polynomial order
+    - **Advanced Interpolation**: Choose between cubic, linear, or nearest neighbor interpolation
+    - **Seaborn Colorblind Palette**: Professional colorblind-friendly color schemes
     - **Advanced Colorbar**: Custom thresholds and appearance settings
-    - **Enhanced Styling**: Professional appearance with consistent formatting
     - **Multiple Export Formats**: PNG, SVG, and CSV downloads available
     """)
     st.markdown('</div>', unsafe_allow_html=True)
