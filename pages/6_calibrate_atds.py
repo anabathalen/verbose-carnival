@@ -273,15 +273,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown('<div class="main-header"><h1>Get IMSCal Input Files</h1><p>Generate input files for IMSCal calibration from your sample data</p></div>', unsafe_allow_html=True)
-
-st.markdown("""
-<div class="info-card">
-    <p>To use IMSCal, you need a reference file and an input file. The reference file is your calibrant information (if you haven't got this yet, go to 'calibrate'), and the input file is your data to be calibrated. Just as for the calibration, make a folder per sample and within that make a text file for each charge state (called e.g. '1.txt', '2.txt' etc.). Paste the corresponding ATD from MassLynx into each one. Zip the folders together and upload it here.</p>
-    <p><strong>Note:</strong> This step is not doing any fitting! All it does is generates an input for IMSCal, which will then convert ATDs to CCSDs.</p>
-</div>
-""", unsafe_allow_html=True)
-
 
 # Main header with gradient styling
 st.markdown("""
