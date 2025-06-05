@@ -422,7 +422,6 @@ def process_folder_data(folder_name, base_path, bush_df, calibrant_type):
 # Function to display the data and plots
 def display_results(results_df, plots, skipped_entries):
     if not results_df.empty:
-        st.markdown('<div class="section-card">', unsafe_allow_html=True)
         st.markdown('<h3 class="section-header">Gaussian Fit Results</h3>', unsafe_allow_html=True)
         st.dataframe(results_df)
         st.markdown('</div>', unsafe_allow_html=True)
@@ -480,7 +479,6 @@ def generate_dat_file(results_df, velocity, voltage, pressure, length):
 
 def calibrate_page():
     # Step 1: Upload ZIP file
-    st.markdown('<div class="section-card">', unsafe_allow_html=True)
     st.markdown('<h3 class="section-header">📁 Upload Calibrant Data</h3>', unsafe_allow_html=True)
     uploaded_zip_file = st.file_uploader("Upload a ZIP file containing your calibrant folders", type="zip")
     st.markdown('</div>', unsafe_allow_html=True)
