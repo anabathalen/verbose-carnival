@@ -10,106 +10,178 @@ from io import StringIO
 st.set_page_config(
     page_title="Home",
     page_icon="🧪",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
-# Clean, minimal CSS styling
-st.markdown(
-    """
-    <style>
+# Enhanced CSS styling matching CCS logging page
+st.markdown("""
+<style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
     
-    /* Clean font styling */
     .stApp {
         font-family: 'Inter', sans-serif;
     }
     
-    /* Clean title styling */
-    .main-title {
-        color: #1f2937;
-        font-size: 2.5rem;
-        font-weight: 600;
-        text-align: center;
-        margin-bottom: 0.5rem;
-    }
-    
-    .subtitle {
-        color: #6b7280;
-        font-size: 1.1rem;
-        text-align: center;
+    .main-header {
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        padding: 1.5rem;
+        border-radius: 12px;
         margin-bottom: 2rem;
+        color: white;
+        text-align: center;
+        box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
     }
     
-    /* Simple button styling */
+    .main-header h1 {
+        margin: 0;
+        font-size: 2.2rem;
+        font-weight: 600;
+    }
+    
+    .main-header p {
+        margin: 0.5rem 0 0 0;
+        opacity: 0.9;
+        font-size: 1.1rem;
+    }
+    
+    .section-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+        margin: 1rem 0;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+    
+    .section-header {
+        color: #667eea;
+        font-size: 1.4rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        border-bottom: 2px solid #667eea;
+        padding-bottom: 0.5rem;
+    }
+    
+    .info-card {
+        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        border-left-color: #667eea;
+        border-left: 4px solid #667eea;
+        border: 1px solid #cbd5e1;
+        padding: 1.5rem;
+        margin: 1.5rem 0;
+        border-radius: 10px;
+    }
+    
+    .warning-card {
+        background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+        border-left-color: #f59e0b;
+        border-left: 4px solid #f59e0b;
+        border: 1px solid #fed7aa;
+        padding: 1.5rem;
+        margin: 1.5rem 0;
+        border-radius: 10px;
+    }
+    
+    .guide-section {
+        background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+        padding: 1.5rem;
+        border-radius: 12px;
+        border: 1px solid #cbd5e1;
+        margin: 1rem 0;
+    }
+    
+    .feedback-section {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+        margin: 2rem 0;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+    
+    /* Enhanced Button Styling */
     .stButton > button {
-        background-color: #3b82f6;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
         border: none;
         border-radius: 8px;
-        padding: 0.5rem 1.5rem;
+        padding: 0.6rem 1.5rem;
         font-weight: 500;
-        transition: background-color 0.2s ease;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
     }
     
     .stButton > button:hover {
-        background-color: #2563eb;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
     }
     
-    /* Clean input styling */
+    /* Form Input Styling */
     .stTextInput > div > div > input,
     .stTextArea > div > div > textarea {
-        border-radius: 6px;
+        border-radius: 8px;
         border: 1px solid #d1d5db;
         font-family: 'Inter', sans-serif;
+        padding: 0.5rem;
+        transition: border-color 0.2s ease;
     }
     
     .stTextInput > div > div > input:focus,
     .stTextArea > div > div > textarea:focus {
-        border-color: #3b82f6;
-        box-shadow: 0 0 0 1px #3b82f6;
+        border-color: #667eea;
+        box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
     }
     
-    /* Section headers */
-    .section-header {
-        color: #1f2937;
-        font-size: 1.5rem;
-        font-weight: 600;
-        margin: 1.5rem 0 1rem 0;
-    }
-    
-    /* Info box styling */
-    .info-box {
-        background-color: #f8fafc;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        padding: 1rem;
-        margin: 1rem 0;
-    }
-    
-    .warning-box {
-        background-color: #fffbeb;
-        border: 1px solid #fed7aa;
-        border-left: 4px solid #f59e0b;
-        border-radius: 6px;
-        padding: 1rem;
-        margin: 1rem 0;
-    }
-    
-    /* Clean table styling */
+    /* Table Styling */
     .stDataFrame {
-        border-radius: 8px;
+        border-radius: 10px;
         overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     }
     
-    /* Hide default Streamlit elements */
-    .css-1d391kg {padding-top: 1rem;}
-    .css-hi6a2p {padding: 0 1rem;}
-    .css-1lsmgbg.e1fqkh3o3 {display: none;}
+    /* Success/Error message styling */
+    .success-message {
+        background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+        border-left: 4px solid #22c55e;
+        border: 1px solid #bbf7d0;
+        padding: 1rem;
+        border-radius: 10px;
+        margin: 1rem 0;
+    }
+    
+    .error-message {
+        background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%);
+        border-left: 4px solid #ef4444;
+        border: 1px solid #fca5a5;
+        padding: 1rem;
+        border-radius: 10px;
+        margin: 1rem 0;
+    }
+    
+    .warning-message {
+        background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+        border-left: 4px solid #f59e0b;
+        border: 1px solid #fed7aa;
+        padding: 1rem;
+        border-radius: 10px;
+        margin: 1rem 0;
+    }
+    
+    /* Sidebar Styling */
+    .css-1d391kg {
+        background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
+    }
+    
+    /* Hide default elements */
     header[data-testid="stHeader"] {display: none;}
     .stDeployButton {display: none;}
-    </style>
-    """, unsafe_allow_html=True
-)
+    .css-1lsmgbg.e1fqkh3o3 {display: none;}
+    .css-1d391kg {padding-top: 1rem;}
+    .css-hi6a2p {padding: 0 1rem;}
+</style>
+""", unsafe_allow_html=True)
 
 # Main layout containers
 header = st.container()
@@ -118,27 +190,34 @@ guide = st.container()
 feedback_section = st.container()
 
 with header:
-    st.markdown('<h1 class="main-title">!!NAME!! CCS Logging and Processing Tools</h1>', unsafe_allow_html=True)
-    st.markdown("---")
+    st.markdown("""
+    <div class="main-header">
+        <h1>!!NAME!! CCS Logging and Processing Tools</h1>
+        <p>Advanced tools for protein CCS analysis and IM-MS data processing</p>
+    </div>
+    """, unsafe_allow_html=True)
 
 with body:
     st.markdown("""
-    <div class="info-box">
-        <p><strong>Welcome!</strong> This site hosts tools for logging protein CCS values and processing IM-MS data. Some stuff about why we are doing this (expanding on beveridge paper, deveoping compendium of protein CCS values hoping to understand how structure links to CCS more closely.) Building on McLean/Bush - but protein data is harder, is it native? </p>
+    <div class="info-card">
+        <p><strong>Welcome!</strong> This site hosts tools for logging protein CCS values and processing IM-MS data. Some stuff about why we are doing this (expanding on beveridge paper, deveoping compendium of protein CCS values hoping to understand how structure links to CCS more closely.) Building on McLean/Bush - but protein data is harder, is it native?</p>
         <p>Please use the tools in the sidebar and provide feedback below!</p>
     </div>
     """, unsafe_allow_html=True)
     
     st.markdown("""
-    <div class="warning-box">
+    <div class="warning-card">
         <strong>⚠️ Work in Progress</strong><br>
         Please sanity check all results before use.
     </div>
     """, unsafe_allow_html=True)
 
 with guide:
-    st.markdown('<h2 class="section-header">📋 Site Guide</h2>', unsafe_allow_html=True)
-    st.write("Use the table below to find the pages you need:")
+    st.markdown("""
+    <div class="section-card">
+        <h2 class="section-header">📋 Site Guide</h2>
+        <p>Use the table below to find the pages you need:</p>
+    """, unsafe_allow_html=True)
 
     # Define your guide table data
     guide_data = {
@@ -166,10 +245,14 @@ with guide:
     
     guide_df = pd.DataFrame(guide_data)
     st.dataframe(guide_df, use_container_width=True, hide_index=True)
+    
+    st.markdown("</div>", unsafe_allow_html=True)
 
 with feedback_section:
-    st.markdown("---")
-    st.markdown('<h2 class="section-header">💬 User Feedback</h2>', unsafe_allow_html=True)
+    st.markdown("""
+    <div class="feedback-section">
+        <h2 class="section-header">💬 User Feedback</h2>
+    """, unsafe_allow_html=True)
 
     name = st.text_input("Name:", max_chars=50, placeholder="Your name (optional)")
     feedback = st.text_area("Share your feedback or suggestions:", height=120, placeholder="Enter your feedback here...")
@@ -178,7 +261,11 @@ with feedback_section:
 
     if submit:
         if not feedback.strip():
-            st.warning("Please enter some feedback before submitting.")
+            st.markdown("""
+            <div class="warning-message">
+                <strong>⚠️ Please enter some feedback before submitting.</strong>
+            </div>
+            """, unsafe_allow_html=True)
         else:
             try:
                 # Load GitHub credentials
@@ -228,9 +315,19 @@ with feedback_section:
 
                 put_response = requests.put(API_URL, headers=headers, json=payload)
                 if put_response.status_code in [200, 201]:
-                    st.success("Thanks! Your feedback has been saved.")
+                    st.markdown("""
+                    <div class="success-message">
+                        <strong>✅ Thanks! Your feedback has been saved.</strong>
+                    </div>
+                    """, unsafe_allow_html=True)
                 else:
                     raise Exception(f"GitHub update error: {put_response.status_code}, {put_response.text}")
 
             except Exception as e:
-                st.error(f"Error saving feedback: {e}")
+                st.markdown(f"""
+                <div class="error-message">
+                    <strong>❌ Error saving feedback:</strong> {e}
+                </div>
+                """, unsafe_allow_html=True)
+    
+    st.markdown("</div>", unsafe_allow_html=True)
