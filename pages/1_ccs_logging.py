@@ -315,7 +315,7 @@ def show_login_form():
     st.markdown("""
     <div class="main-header">
         <h1>🔐 CCS Database Login</h1>
-        <p>Please log in to access the protein CCS logging system</p>
+        <p>Please log in to access the protein CCS logging system. If you don't have an account, email ana.bathalen@manchester.ac.uk to get one! You will be assigned a username and password.</p>
     </div>
     """, unsafe_allow_html=True)
     
@@ -561,7 +561,7 @@ def show_data_entry_page():
     st.markdown("""
     <div class="info-card">
         <strong>ℹ️ Instructions</strong><br>
-        Enter the DOI of your paper to check if it already exists in our database and retrieve publication details automatically.
+        Enter the DOI of your paper to check if it already exists in our database.
     </div>
     """, unsafe_allow_html=True)
     
@@ -569,7 +569,7 @@ def show_data_entry_page():
     with col1:
         doi = st.text_input(
             "📝 Enter DOI", 
-            placeholder="e.g., 10.1021/acs.jproteome.2023.example",
+            placeholder="e.g., 10.1234/example",
             help="Digital Object Identifier"
         )
     with col2:
@@ -701,12 +701,51 @@ def show_data_entry_page():
             col1, col2 = st.columns(2)
             with col1:
                 uniprot_id = st.text_input("UniProt ID", placeholder="e.g., P12345")
+                # NEW: Source tracking for UniProt ID
+                uniprot_source = st.radio(
+                    "UniProt ID source:",
+                    ["Not provided", "Provided in paper", "User searched"],
+                    key="uniprot_source",
+                    horizontal=True
+                ) if uniprot_id else "Not provided"
+                
                 sequence_mass_value = st.number_input("Sequence Mass or Best Approximation (Da)", min_value=0.0, value=0.0, format="%.2f")
+                # NEW: Source tracking for Sequence Mass
+                sequence_mass_source = st.radio(
+                    "Sequence Mass source:",
+                    ["Not provided", "Provided in paper", "User calculated"],
+                    key="sequence_mass_source",
+                    horizontal=True
+                ) if sequence_mass_value > 0 else "Not provided"
+                
                 protein_sequence = st.text_area("Protein Sequence", placeholder="Enter amino acid sequence...")
+                # NEW: Source tracking for Protein Sequence
+                sequence_source = st.radio(
+                    "Protein Sequence source:",
+                    ["Not provided", "Provided in paper", "User searched"],
+                    key="sequence_source",
+                    horizontal=True
+                ) if protein_sequence else "Not provided"
             
             with col2:
                 pdb_id = st.text_input("PDB ID", placeholder="e.g., 1ABC")
+                # NEW: Source tracking for PDB ID
+                pdb_source = st.radio(
+                    "PDB ID source:",
+                    ["Not provided", "Provided in paper", "User searched"],
+                    key="pdb_source",
+                    horizontal=True
+                ) if pdb_id else "Not provided"
+                
                 measured_mass_value = st.number_input("Measured Mass (Da)", min_value=0.0, value=0.0, format="%.2f")
+                # NEW: Source tracking for Measured Mass
+                measured_mass_source = st.radio(
+                    "Measured Mass source:",
+                    ["Not provided", "Provided in paper", "User calculated"],
+                    key="measured_mass_source",
+                    horizontal=True
+                ) if measured_mass_value > 0 else "Not provided"
+                
                 additional_notes = st.text_area("Additional Notes", placeholder="Sample preparation, instrument settings, etc.")
             st.markdown('</div>', unsafe_allow_html=True)
 
@@ -733,24 +772,75 @@ def show_data_entry_page():
                 num_ccs_values = st.number_input("Number of charge states", min_value=1, step=1)
                 
                 ccs_data = []
+                ccs_data_sources = []  # NEW: Track CCS data sources
                 st.markdown("**Enter charge states and corresponding CCS values:**")
                 
+                # NEW: Select All / Deselect All buttons for CCS sources
+                if int(num_ccs_values) > 1:
+                    st.markdown("**CCS Value Sources (check all that apply):**")
+                    col_btn1, col_btn2, col_spacer = st.columns([1, 1, 3])
+                    with col_btn1:
+                        select_all_paper = st.button("✅ All from Paper", key="select_all_paper")
+                    with col_btn2:
+                        select_all_graph = st.button("📊 All from Graph", key="select_all_graph")
+                
                 for i in range(int(num_ccs_values)):
-                    col1, col2 = st.columns(2)
+                    st.markdown(f"**Charge State {i+1}:**")
+                    col1, col2, col3 = st.columns([1, 1, 2])
                     with col1:
-                        charge_state = st.number_input(f"Charge State {i+1}", min_value=1, step=1, key=f"charge_{i}")
+                        charge_state = st.number_input(f"Charge", min_value=1, step=1, key=f"charge_{i}")
                     with col2:
-                        ccs_value = st.number_input(f"CCS Value {i+1} (Ų)", min_value=0.0, format="%.2f", key=f"ccs_{i}")
+                        ccs_value = st.number_input(f"CCS (Ų)", min_value=0.0, format="%.2f", key=f"ccs_{i}")
+                    with col3:
+                        # NEW: CCS value source tracking
+                        if ccs_value > 0:
+                            # Handle select all functionality
+                            default_paper = st.session_state.get('select_all_paper_clicked', False) if 'select_all_paper_clicked' in st.session_state else False
+                            default_graph = st.session_state.get('select_all_graph_clicked', False) if 'select_all_graph_clicked' in st.session_state else False
+                            
+                            col3a, col3b = st.columns(2)
+                            with col3a:
+                                from_paper = st.checkbox("Provided in paper", key=f"ccs_paper_{i}", value=default_paper)
+                            with col3b:
+                                from_graph = st.checkbox("Read from graph", key=f"ccs_graph_{i}", value=default_graph)
+                            
+                            ccs_data_sources.append({
+                                'from_paper': from_paper,
+                                'from_graph': from_graph
+                            })
+                        else:
+                            ccs_data_sources.append({
+                                'from_paper': False,
+                                'from_graph': False
+                            })
+                    
                     ccs_data.append((charge_state, ccs_value))
+                
+                # Handle select all button clicks
+                if int(num_ccs_values) > 1:
+                    if select_all_paper:
+                        st.session_state.select_all_paper_clicked = True
+                        st.rerun()
+                    if select_all_graph:
+                        st.session_state.select_all_graph_clicked = True
+                        st.rerun()
+                
             else:
                 st.info("⚠️ Please select ionization mode to enter CCS values")
                 ccs_data = []
+                ccs_data_sources = []
             st.markdown('</div>', unsafe_allow_html=True)
 
             # Form submission
             submit_button = st.form_submit_button("➕ Add Protein Entry", use_container_width=True)
             
             if submit_button:
+                # Reset select all flags
+                if 'select_all_paper_clicked' in st.session_state:
+                    del st.session_state.select_all_paper_clicked
+                if 'select_all_graph_clicked' in st.session_state:
+                    del st.session_state.select_all_graph_clicked
+                
                 # Validation
                 errors = []
                 if not protein_name:
@@ -770,7 +860,7 @@ def show_data_entry_page():
                     for error in errors:
                         st.error(f"❌ {error}")
                 else:
-                    # Create protein entry
+                    # Create protein entry with new source tracking fields
                     protein_entry = {
                         'user_name': user_name,
                         'protein_name': protein_name,
@@ -782,12 +872,18 @@ def show_data_entry_page():
                         'subunit_count': subunit_count,
                         'oligomer_type': oligomer_type if subunit_count > 1 else "",
                         'uniprot': uniprot_id,
+                        'uniprot_source': uniprot_source,  # NEW
                         'pdb': pdb_id,
+                        'pdb_source': pdb_source,  # NEW
                         'sequence': protein_sequence,
+                        'sequence_source': sequence_source,  # NEW
                         'sequence_mass': sequence_mass_value if sequence_mass_value > 0 else None,
+                        'sequence_mass_source': sequence_mass_source,  # NEW
                         'measured_mass': measured_mass_value if measured_mass_value > 0 else None,
+                        'measured_mass_source': measured_mass_source,  # NEW
                         'additional_notes': additional_notes,
-                        'ccs_data': [(int(charge), float(ccs)) for charge, ccs in ccs_data if ccs > 0]
+                        'ccs_data': [(int(charge), float(ccs)) for charge, ccs in ccs_data if ccs > 0],
+                        'ccs_data_sources': [src for i, src in enumerate(ccs_data_sources) if ccs_data[i][1] > 0]  # NEW
                     }
                     
                     # Add to session state
@@ -812,18 +908,37 @@ def show_data_entry_page():
                         st.write(f"**IMS Type:** {protein['ims_type']}")
                         st.write(f"**Drift Gas:** {protein['drift_gas']}")
                         st.write(f"**Ionization Mode:** {protein['ionization_mode']}")
+                        # NEW: Display source information
+                        if protein.get('uniprot'):
+                            st.write(f"**UniProt:** {protein['uniprot']} _{protein.get('uniprot_source', 'Unknown source')}_")
+                        if protein.get('pdb'):
+                            st.write(f"**PDB:** {protein['pdb']} _{protein.get('pdb_source', 'Unknown source')}_")
                     with col2:
                         st.write(f"**Native Measurement:** {protein['native_measurement']}")
                         st.write(f"**Subunit Count:** {protein['subunit_count']}")
                         if protein['oligomer_type']:
                             st.write(f"**Oligomer Type:** {protein['oligomer_type']}")
-                        if protein['uniprot']:
-                            st.write(f"**UniProt:** {protein['uniprot']}")
-                        if protein['pdb']:
-                            st.write(f"**PDB:** {protein['pdb']}")
+                        # NEW: Display mass source information
+                        if protein.get('sequence_mass'):
+                            st.write(f"**Sequence Mass:** {protein['sequence_mass']} Da _{protein.get('sequence_mass_source', 'Unknown source')}_")
+                        if protein.get('measured_mass'):
+                            st.write(f"**Measured Mass:** {protein['measured_mass']} Da _{protein.get('measured_mass_source', 'Unknown source')}_")
+                        if protein.get('sequence'):
+                            st.write(f"**Sequence Source:** _{protein.get('sequence_source', 'Unknown source')}_")
                     
-                    st.write("**CCS Values:**")
-                    ccs_df = pd.DataFrame(protein['ccs_data'], columns=['Charge State', 'CCS (Ų)'])
+                    st.write("**CCS Values with Sources:**")
+                    ccs_display_data = []
+                    for j, (charge, ccs) in enumerate(protein['ccs_data']):
+                        source_info = protein.get('ccs_data_sources', [{}])[j] if j < len(protein.get('ccs_data_sources', [])) else {}
+                        sources = []
+                        if source_info.get('from_paper', False):
+                            sources.append("Paper")
+                        if source_info.get('from_graph', False):
+                            sources.append("Graph")
+                        source_text = ", ".join(sources) if sources else "Unknown"
+                        ccs_display_data.append([charge, ccs, source_text])
+                    
+                    ccs_df = pd.DataFrame(ccs_display_data, columns=['Charge State', 'CCS (Ų)', 'Source'])
                     st.dataframe(ccs_df, use_container_width=True)
                     
                     if st.button(f"🗑️ Remove {protein['protein_name']}", key=f"remove_{i}"):
