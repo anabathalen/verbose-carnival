@@ -277,7 +277,7 @@ st.markdown("""
 st.markdown("""
 <div class="main-header">
     <h1>Process Output Files</h1>
-    <p>Get a CCS value for Every Timepoint for Every Charge State of Every Protein</p>
+    <p>Get a CCS value for every timepoint for every charge state of every protein</p>
 </div>
 """, unsafe_allow_html=True)
 
