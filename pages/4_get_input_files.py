@@ -509,5 +509,3 @@ def generate_input_dat_files_app():
             st.markdown('</div>', unsafe_allow_html=True)
 
 generate_input_dat_files_app()
-
-generate_input_dat_files_app()
