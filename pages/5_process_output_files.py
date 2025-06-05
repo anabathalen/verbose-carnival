@@ -285,9 +285,7 @@ st.markdown("""
 st.markdown("""
 <div class="info-card">
     <p>This step is about finishing off the calibration. For many (most) purposes, it is useless and annoying that I have separated out this final part of the calibration from the generation of the full calibrated dataset, but for situations where you have done multiple experiments on the same protein (e.g. activated ion mobility), it is useful to only have to calibrate once.</p>
-    
     <p>Here you are generating CCS values for every timepoint in the ATD for all the charge states of the proteins in your folders - if, for example, you have run Protein X at 5 different collision voltages, you only need to calibrate at one collision voltage.</p>
-    
     <p><strong>Note:</strong> Once you have completed this step, go to 'Process and Plot Data' to finish the job. Again, no fitting is being done here.</p>
 </div>
 """, unsafe_allow_html=True)
