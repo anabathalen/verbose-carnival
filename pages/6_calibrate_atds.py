@@ -287,7 +287,6 @@ st.markdown("""
 <div class="info-card">
     <p>This step combines your raw drift time data with the calibration information from the previous step. 
     The process matches drift times from your calibration data with the corresponding intensities from your raw files.</p>
-    
     <p><strong>What you'll need:</strong></p>
     <ul>
         <li>ZIP file containing raw drift files (X.txt format where X is the charge state)</li>
@@ -298,16 +297,6 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 def calibrate_drift_files_page():
-    # Progress indicator
-    st.markdown("""
-    <div style="text-align: center; margin: 2rem 0;">
-        <span class="progress-step completed">1</span>
-        <span class="progress-step active">2</span>
-        <span class="progress-step">3</span>
-        <br>
-        <small style="color: #64748b;">Process Outputs → <strong>Calibrate Drift</strong> → Plot Data</small>
-    </div>
-    """, unsafe_allow_html=True)
     
     # Step 1: Upload drift files
     st.markdown("""
