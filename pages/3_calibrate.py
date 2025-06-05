@@ -302,7 +302,6 @@ data = {
 
 df = pd.DataFrame(data)
 
-st.markdown('<div class="section-card">', unsafe_allow_html=True)
 st.markdown('<h3 class="section-header">Calibrant Folder Naming Convention</h3>', unsafe_allow_html=True)
 st.table(df)
 st.markdown('</div>', unsafe_allow_html=True)
