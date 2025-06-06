@@ -725,18 +725,18 @@ def main():
 				st.error(f"Error processing file: {str(e)}")
 				st.error("Please check that your CSV file has the required columns: Charge, CCS, Scaled Intensity")
 
-	else:
-        st.info("👆 Please upload a calibrated CSV file to begin fitting")
+		else:
+        		st.info("👆 Please upload a calibrated CSV file to begin fitting")
         
-        # Show example data format
-        st.subheader("Expected Data Format")
-        example_df = pd.DataFrame({
-            'Charge': [14, 14, 14, 15, 15, 15],
-            'CCS': [966.6, 1113.2, 1233.8, 1050.2, 1180.5, 1290.1],
-            'Scaled Intensity': [27474, 19029, 9582, 31200, 22150, 11890],
-            'Drift': [0.000182, 0.000364, 0.000547, 0.000201, 0.000401, 0.000601]
-        })
-        st.dataframe(example_df)
+        		# Show example data format
+        		st.subheader("Expected Data Format")
+        		example_df = pd.DataFrame({
+        		'Charge': [14, 14, 14, 15, 15, 15],
+        		'CCS': [966.6, 1113.2, 1233.8, 1050.2, 1180.5, 1290.1],
+        		'Scaled Intensity': [27474, 19029, 9582, 31200, 22150, 11890],
+        		'Drift': [0.000182, 0.000364, 0.000547, 0.000201, 0.000401, 0.000601]
+       			})
+        		st.dataframe(example_df)
 
 if __name__ == "__main__":
     main()
