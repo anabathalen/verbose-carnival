@@ -323,8 +323,93 @@ def main():
                         ])
                 st.session_state.fitted_params[data_label] = new_params[:n_gaussians*3]
             
-            # Interactive parameter sliders
+            # Interactive parameter controls
             st.sidebar.header("🎛️ Gaussian Parameters")
+            
+            # Initialize fixed parameters if not exists
+            if 'fixed_params' not in st.session_state:
+                st.session_state.fixed_params = {}
+            
+            if data_label not in st.session_state.fixed_params:
+                st.session_state.fixed_params[data_label] = [False] * (n_gaussians * 3)
+            
+            # Adjust fixed parameters list if number of Gaussians changed
+            if len(st.session_state.fixed_params[data_label]) != n_gaussians * 3:
+                st.session_state.fixed_params[data_label] = [False] * (n_gaussians * 3)
+            
+            # Constrained fitting button
+            if st.sidebar.button("🔧 Fit with Fixed Parameters"):
+                x_data = plot_data['CCS'].values
+                y_data = plot_data['Scaled Intensity'].values
+                current_params = st.session_state.fitted_params[data_label]
+                fixed_flags = st.session_state.fixed_params[data_label]
+                
+                try:
+                    # Create masks for free and fixed parameters
+                    free_param_mask = [not fixed for fixed in fixed_flags]
+                    free_params = [p for i, p in enumerate(current_params) if free_param_mask[i]]
+                    fixed_values = [p for i, p in enumerate(current_params) if fixed_flags[i]]
+                    
+                    if len(free_params) > 0:  # Only fit if there are free parameters
+                        def constrained_multi_gaussian(x, *free_params):
+                            # Reconstruct full parameter list
+                            full_params = []
+                            free_idx = 0
+                            fixed_idx = 0
+                            
+                            for i, is_fixed in enumerate(fixed_flags):
+                                if is_fixed:
+                                    full_params.append(current_params[i])
+                                else:
+                                    full_params.append(free_params[free_idx])
+                                    free_idx += 1
+                            
+                            return multi_gaussian(x, *full_params)
+                        
+                        # Create bounds for free parameters only
+                        free_bounds_lower = []
+                        free_bounds_upper = []
+                        
+                        for i, is_fixed in enumerate(fixed_flags):
+                            if not is_fixed:
+                                param_type = i % 3  # 0=amplitude, 1=center, 2=width
+                                if param_type == 0:  # amplitude
+                                    free_bounds_lower.append(0)
+                                    free_bounds_upper.append(y_data.max() * 2)
+                                elif param_type == 1:  # center
+                                    free_bounds_lower.append(x_data.min())
+                                    free_bounds_upper.append(x_data.max())
+                                else:  # width
+                                    free_bounds_lower.append(0.1)
+                                    free_bounds_upper.append((x_data.max() - x_data.min()))
+                        
+                        # Fit with constraints
+                        popt_free, _ = curve_fit(
+                            constrained_multi_gaussian,
+                            x_data, y_data,
+                            p0=free_params,
+                            bounds=(free_bounds_lower, free_bounds_upper),
+                            maxfev=10000
+                        )
+                        
+                        # Reconstruct full parameter list
+                        fitted_params = []
+                        free_idx = 0
+                        
+                        for i, is_fixed in enumerate(fixed_flags):
+                            if is_fixed:
+                                fitted_params.append(current_params[i])
+                            else:
+                                fitted_params.append(popt_free[free_idx])
+                                free_idx += 1
+                        
+                        st.session_state.fitted_params[data_label] = fitted_params
+                        st.success("Constrained fitting completed!")
+                    else:
+                        st.warning("All parameters are fixed - nothing to fit!")
+                        
+                except Exception as e:
+                    st.error(f"Constrained fitting failed: {str(e)}")
             
             params = []
             for i in range(n_gaussians):
@@ -332,33 +417,71 @@ def main():
                 
                 # Get current parameters
                 current_params = st.session_state.fitted_params[data_label]
+                fixed_flags = st.session_state.fixed_params[data_label]
                 
-                amplitude = st.sidebar.slider(
-                    f"Amplitude {i+1}",
-                    min_value=0.0,
-                    max_value=plot_data['Scaled Intensity'].max() * 2,
-                    value=float(current_params[i*3]),
-                    step=plot_data['Scaled Intensity'].max() / 100,
-                    key=f"amp_{i}_{data_label}"
-                )
+                # Create columns for parameter and fix checkbox
+                col1, col2 = st.sidebar.columns([3, 1])
                 
-                center = st.sidebar.slider(
-                    f"Center {i+1}",
-                    min_value=float(plot_data['CCS'].min()),
-                    max_value=float(plot_data['CCS'].max()),
-                    value=float(current_params[i*3+1]),
-                    step=(plot_data['CCS'].max() - plot_data['CCS'].min()) / 1000,
-                    key=f"center_{i}_{data_label}"
-                )
+                with col1:
+                    amplitude = st.number_input(
+                        f"Amplitude {i+1}",
+                        min_value=0.0,
+                        max_value=plot_data['Scaled Intensity'].max() * 2,
+                        value=float(current_params[i*3]),
+                        step=plot_data['Scaled Intensity'].max() / 100,
+                        format="%.2f",
+                        key=f"amp_{i}_{data_label}"
+                    )
                 
-                width = st.sidebar.slider(
-                    f"Width {i+1}",
-                    min_value=0.1,
-                    max_value=(plot_data['CCS'].max() - plot_data['CCS'].min()) / 2,
-                    value=float(current_params[i*3+2]),
-                    step=0.1,
-                    key=f"width_{i}_{data_label}"
-                )
+                with col2:
+                    fix_amp = st.checkbox(
+                        "Fix",
+                        value=fixed_flags[i*3],
+                        key=f"fix_amp_{i}_{data_label}"
+                    )
+                    st.session_state.fixed_params[data_label][i*3] = fix_amp
+                
+                col1, col2 = st.sidebar.columns([3, 1])
+                
+                with col1:
+                    center = st.number_input(
+                        f"Center {i+1}",
+                        min_value=float(plot_data['CCS'].min()),
+                        max_value=float(plot_data['CCS'].max()),
+                        value=float(current_params[i*3+1]),
+                        step=(plot_data['CCS'].max() - plot_data['CCS'].min()) / 1000,
+                        format="%.3f",
+                        key=f"center_{i}_{data_label}"
+                    )
+                
+                with col2:
+                    fix_center = st.checkbox(
+                        "Fix",
+                        value=fixed_flags[i*3+1],
+                        key=f"fix_center_{i}_{data_label}"
+                    )
+                    st.session_state.fixed_params[data_label][i*3+1] = fix_center
+                
+                col1, col2 = st.sidebar.columns([3, 1])
+                
+                with col1:
+                    width = st.number_input(
+                        f"Width {i+1}",
+                        min_value=0.1,
+                        max_value=(plot_data['CCS'].max() - plot_data['CCS'].min()) / 2,
+                        value=float(current_params[i*3+2]),
+                        step=0.1,
+                        format="%.3f",
+                        key=f"width_{i}_{data_label}"
+                    )
+                
+                with col2:
+                    fix_width = st.checkbox(
+                        "Fix",
+                        value=fixed_flags[i*3+2],
+                        key=f"fix_width_{i}_{data_label}"
+                    )
+                    st.session_state.fixed_params[data_label][i*3+2] = fix_width
                 
                 params.extend([amplitude, center, width])
             
