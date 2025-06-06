@@ -265,476 +265,307 @@ def main():
             if 'all_fit_results' not in st.session_state:
                 st.session_state.all_fit_results = {}
             
-            # Show multi-charge results management for individual mode
-            if mode == "Individual Charge State":
-                st.sidebar.header("🗂️ Multi-Charge Results")
-                
-                # Show currently saved results
-                if st.session_state.all_fit_results:
-                    st.sidebar.write("**Saved Fits:**")
-                    for charge, result in st.session_state.all_fit_results.items():
-                        st.sidebar.write(f"• Charge {charge}: {result['n_gaussians']} Gaussians (R² = {result['r_squared']:.3f})")
-                
-                # Clear all results button
-                if st.sidebar.button("🗑️ Clear All Saved Results"):
-                    st.session_state.all_fit_results = {}
-                    st.sidebar.success("All results cleared!")
-                
-                st.sidebar.markdown("---")
-            
-            # Prepare data based on mode
-            if mode == "Individual Charge State":
-                selected_charge = st.sidebar.selectbox("Select Charge State", charges)
-                plot_data = df[df['Charge'] == selected_charge].copy()
-                plot_data = plot_data.sort_values('CCS')
-                data_label = f"Charge {selected_charge}"
+            # Replace the sidebar multi-charge results section and export section with this:
+
+# In the sidebar (around line 280, replace the multi-charge results management section):
+if mode == "Individual Charge State":
+    st.sidebar.header("🗂️ Sequential Fitting Workflow")
+    
+    # Progress indicator
+    total_charges = len(charges)
+    fitted_charges = len(st.session_state.all_fit_results)
+    
+    st.sidebar.progress(fitted_charges / total_charges)
+    st.sidebar.write(f"Progress: {fitted_charges}/{total_charges} charge states fitted")
+    
+    # Show fitted and remaining charges
+    fitted_list = list(st.session_state.all_fit_results.keys())
+    remaining_list = [c for c in charges if c not in fitted_list]
+    
+    if fitted_list:
+        st.sidebar.write("**✅ Fitted:**")
+        for charge in sorted(fitted_list):
+            result = st.session_state.all_fit_results[charge]
+            st.sidebar.write(f"• Charge {charge}: {result['n_gaussians']}G (R²={result['r_squared']:.3f})")
+    
+    if remaining_list:
+        st.sidebar.write("**⏳ Remaining:**")
+        for charge in sorted(remaining_list):
+            st.sidebar.write(f"• Charge {charge}")
+    
+    # Auto-select next unfitted charge
+    if remaining_list and 'auto_select' not in st.session_state:
+        st.session_state.auto_select = True
+    
+    if st.session_state.get('auto_select', False) and remaining_list:
+        next_charge = min(remaining_list)
+        if selected_charge != next_charge:
+            st.rerun()
+    
+    # Quick navigation
+    st.sidebar.write("**🎯 Quick Navigation:**")
+    col1, col2 = st.sidebar.columns(2)
+    
+    with col1:
+        if st.button("⏮️ Previous"):
+            current_idx = charges.index(selected_charge)
+            if current_idx > 0:
+                st.session_state.selected_charge = charges[current_idx - 1]
+                st.rerun()
+    
+    with col2:
+        if st.button("⏭️ Next"):
+            current_idx = charges.index(selected_charge)
+            if current_idx < len(charges) - 1:
+                st.session_state.selected_charge = charges[current_idx + 1]
+                st.rerun()
+    
+    # Management buttons
+    col1, col2 = st.sidebar.columns(2)
+    with col1:
+        if st.button("🗑️ Clear All"):
+            st.session_state.all_fit_results = {}
+            st.sidebar.success("All results cleared!")
+    
+    with col2:
+        if st.button("🔄 Reset Current"):
+            if selected_charge in st.session_state.all_fit_results:
+                del st.session_state.all_fit_results[selected_charge]
+                st.sidebar.success(f"Charge {selected_charge} reset!")
+
+# Replace the charge selection with this (around line 320):
+if mode == "Individual Charge State":
+    # Use session state for charge selection to enable navigation
+    if 'selected_charge' not in st.session_state:
+        remaining_charges = [c for c in charges if c not in st.session_state.all_fit_results]
+        st.session_state.selected_charge = min(remaining_charges) if remaining_charges else charges[0]
+    
+    selected_charge = st.sidebar.selectbox(
+        "Select Charge State", 
+        charges,
+        index=charges.index(st.session_state.selected_charge),
+        key="charge_selector"
+    )
+    
+    # Update session state when selection changes
+    if selected_charge != st.session_state.selected_charge:
+        st.session_state.selected_charge = selected_charge
+    
+    plot_data = df[df['Charge'] == selected_charge].copy()
+    plot_data = plot_data.sort_values('CCS')
+    data_label = f"Charge {selected_charge}"
+    
+    # Show fit status for current charge
+    if selected_charge in st.session_state.all_fit_results:
+        st.sidebar.success(f"✅ Charge {selected_charge} already fitted!")
+        if st.sidebar.button("🔄 Load Saved Parameters"):
+            saved_result = st.session_state.all_fit_results[selected_charge]
+            loaded_params = []
+            for param in saved_result['parameters']:
+                loaded_params.extend([param['amplitude'], param['center'], param['width']])
+            st.session_state.fitted_params[data_label] = loaded_params
+            n_gaussians = saved_result['n_gaussians']
+    else:
+        st.sidebar.info(f"⏳ Fit Charge {selected_charge}")
+
+# Replace the save button section (around line 600) with this enhanced version:
+with col2:
+    # Fit statistics
+    st.subheader("📈 Fit Statistics")
+    
+    # Calculate R-squared and RMSE
+    y_data_interp = np.interp(x_fit, plot_data['CCS'], plot_data['Scaled Intensity'])
+    ss_res = np.sum((y_data_interp - y_fit) ** 2)
+    ss_tot = np.sum((y_data_interp - np.mean(y_data_interp)) ** 2)
+    r_squared = 1 - (ss_res / ss_tot) if ss_tot != 0 else 0
+    rmse = np.sqrt(np.mean((y_data_interp - y_fit)**2))
+    
+    st.metric("R²", f"{r_squared:.4f}")
+    st.metric("RMSE", f"{rmse:.2f}")
+    
+    # Save/Update buttons for individual charge states
+    if mode == "Individual Charge State":
+        col_a, col_b = st.columns(2)
+        
+        with col_a:
+            if selected_charge not in st.session_state.all_fit_results:
+                if st.button("💾 Save Fit", type="primary", use_container_width=True):
+                    save_fit_result(selected_charge, params, n_gaussians, r_squared, rmse)
+                    st.success(f"✅ Saved!")
+                    # Auto-advance to next unfitted charge
+                    remaining = [c for c in charges if c not in st.session_state.all_fit_results]
+                    if remaining:
+                        st.session_state.selected_charge = min(remaining)
+                        st.rerun()
             else:
-                plot_data = create_summed_data(df)
-                data_label = "Summed Data"
+                if st.button("🔄 Update Fit", type="secondary", use_container_width=True):
+                    save_fit_result(selected_charge, params, n_gaussians, r_squared, rmse)
+                    st.success(f"✅ Updated!")
+        
+        with col_b:
+            if st.button("⏭️ Save & Next", use_container_width=True):
+                save_fit_result(selected_charge, params, n_gaussians, r_squared, rmse)
+                remaining = [c for c in charges if c not in st.session_state.all_fit_results]
+                if remaining:
+                    st.session_state.selected_charge = min(remaining)
+                    st.success("✅ Saved! Moving to next...")
+                    st.rerun()
+                else:
+                    st.success("🎉 All charges fitted!")
+    
+    # Parameter summary
+    st.subheader("📋 Parameters")
+    param_df = pd.DataFrame({
+        'Gaussian': [i+1 for i in range(n_gaussians)],
+        'Amplitude': [f"{params[i*3]:.3f}" for i in range(n_gaussians)],
+        'Center': [f"{params[i*3+1]:.3f}" for i in range(n_gaussians)],
+        'Width': [f"{params[i*3+2]:.3f}" for i in range(n_gaussians)]
+    })
+    st.dataframe(param_df, use_container_width=True)
+
+# Replace the entire export section with this comprehensive version:
+# Export section
+st.header("💾 Export Results")
+
+if mode == "Individual Charge State":
+    # Show completion status
+    total_charges = len(charges)
+    fitted_charges = len(st.session_state.all_fit_results)
+    
+    if fitted_charges == total_charges:
+        st.success(f"🎉 All {total_charges} charge states fitted! Ready for export.")
+    else:
+        st.info(f"📊 {fitted_charges}/{total_charges} charge states fitted.")
+    
+    # Export options
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        # Download all parameters as CSV
+        if st.button("📋 All Parameters CSV", type="primary") and st.session_state.all_fit_results:
+            # Create comprehensive parameters DataFrame
+            param_rows = []
+            for charge, result in st.session_state.all_fit_results.items():
+                for param in result['parameters']:
+                    param_rows.append({
+                        'Charge': charge,
+                        'Gaussian': param['gaussian'],
+                        'Amplitude': param['amplitude'],
+                        'Center': param['center'],
+                        'Width': param['width'],
+                        'R_squared': result['r_squared'],
+                        'RMSE': result['rmse'],
+                        'Total_Gaussians': result['n_gaussians']
+                    })
             
-            # Remove zero intensities for cleaner fitting
-            plot_data = plot_data[plot_data['Scaled Intensity'] > 0]
+            param_df = pd.DataFrame(param_rows)
+            csv_buffer = io.StringIO()
+            param_df.to_csv(csv_buffer, index=False)
             
-            if len(plot_data) == 0:
-                st.error("No data points with positive intensity found")
-                return
-            
-            # Fitting controls
-            st.sidebar.header("🎯 Fitting Controls")
-            
-            # Number of Gaussians
-            n_gaussians = st.sidebar.number_input(
-                "Number of Gaussians", 
-                min_value=1, 
-                max_value=10, 
-                value=1
+            st.download_button(
+                label="📥 Download Parameters CSV",
+                data=csv_buffer.getvalue(),
+                file_name="all_gaussian_parameters.csv",
+                mime="text/csv",
+                type="primary"
             )
-            
-            # Auto-fit button
-            if st.sidebar.button("🔄 Auto-fit Gaussians"):
-                x_data = plot_data['CCS'].values
-                y_data = plot_data['Scaled Intensity'].values
-                fitted_params = auto_fit_gaussians(x_data, y_data, n_gaussians)
-                
-                # Store fitted parameters in session state
-                if 'fitted_params' not in st.session_state:
-                    st.session_state.fitted_params = {}
-                st.session_state.fitted_params[data_label] = fitted_params
-            
-            # Initialize parameters if not exists
-            if 'fitted_params' not in st.session_state:
-                st.session_state.fitted_params = {}
-            
-            if data_label not in st.session_state.fitted_params:
-                # Default parameters
-                x_range = plot_data['CCS'].max() - plot_data['CCS'].min()
-                centers = np.linspace(
-                    plot_data['CCS'].min() + x_range/4, 
-                    plot_data['CCS'].max() - x_range/4, 
-                    n_gaussians
-                )
-                default_params = []
-                for center in centers:
-                    default_params.extend([
-                        plot_data['Scaled Intensity'].max()/n_gaussians,  # amplitude
-                        center,  # center
-                        x_range/(n_gaussians*4)  # width
-                    ])
-                st.session_state.fitted_params[data_label] = default_params
-            
-            # Adjust parameters list if number of Gaussians changed
-            current_params = st.session_state.fitted_params[data_label]
-            if len(current_params) != n_gaussians * 3:
-                x_range = plot_data['CCS'].max() - plot_data['CCS'].min()
-                centers = np.linspace(
-                    plot_data['CCS'].min() + x_range/4, 
-                    plot_data['CCS'].max() - x_range/4, 
-                    n_gaussians
-                )
-                new_params = []
-                for i, center in enumerate(centers):
-                    if i * 3 < len(current_params):
-                        # Use existing parameters if available
-                        new_params.extend(current_params[i*3:(i+1)*3])
-                    else:
-                        # Add default parameters for new Gaussians
-                        new_params.extend([
-                            plot_data['Scaled Intensity'].max()/n_gaussians,
-                            center,
-                            x_range/(n_gaussians*4)
-                        ])
-                st.session_state.fitted_params[data_label] = new_params[:n_gaussians*3]
-            
-            # Interactive parameter controls
-            st.sidebar.header("🎛️ Gaussian Parameters")
-            
-            # Initialize fixed parameters if not exists
-            if 'fixed_params' not in st.session_state:
-                st.session_state.fixed_params = {}
-            
-            if data_label not in st.session_state.fixed_params:
-                st.session_state.fixed_params[data_label] = [False] * (n_gaussians * 3)
-            
-            # Adjust fixed parameters list if number of Gaussians changed
-            if len(st.session_state.fixed_params[data_label]) != n_gaussians * 3:
-                st.session_state.fixed_params[data_label] = [False] * (n_gaussians * 3)
-            
-            # Constrained fitting button
-            if st.sidebar.button("🔧 Fit with Fixed Parameters"):
-                x_data = plot_data['CCS'].values
-                y_data = plot_data['Scaled Intensity'].values
-                current_params = st.session_state.fitted_params[data_label]
-                fixed_flags = st.session_state.fixed_params[data_label]
-                
-                try:
-                    # Create masks for free and fixed parameters
-                    free_param_mask = [not fixed for fixed in fixed_flags]
-                    free_params = [p for i, p in enumerate(current_params) if free_param_mask[i]]
-                    fixed_values = [p for i, p in enumerate(current_params) if fixed_flags[i]]
-                    
-                    if len(free_params) > 0:  # Only fit if there are free parameters
-                        def constrained_multi_gaussian(x, *free_params):
-                            # Reconstruct full parameter list
-                            full_params = []
-                            free_idx = 0
-                            fixed_idx = 0
-                            
-                            for i, is_fixed in enumerate(fixed_flags):
-                                if is_fixed:
-                                    full_params.append(current_params[i])
-                                else:
-                                    full_params.append(free_params[free_idx])
-                                    free_idx += 1
-                            
-                            return multi_gaussian(x, *full_params)
-                        
-                        # Create bounds for free parameters only
-                        free_bounds_lower = []
-                        free_bounds_upper = []
-                        
-                        for i, is_fixed in enumerate(fixed_flags):
-                            if not is_fixed:
-                                param_type = i % 3  # 0=amplitude, 1=center, 2=width
-                                if param_type == 0:  # amplitude
-                                    free_bounds_lower.append(0)
-                                    free_bounds_upper.append(y_data.max() * 2)
-                                elif param_type == 1:  # center
-                                    free_bounds_lower.append(x_data.min())
-                                    free_bounds_upper.append(x_data.max())
-                                else:  # width
-                                    free_bounds_lower.append(0.1)
-                                    free_bounds_upper.append((x_data.max() - x_data.min()))
-                        
-                        # Fit with constraints
-                        popt_free, _ = curve_fit(
-                            constrained_multi_gaussian,
-                            x_data, y_data,
-                            p0=free_params,
-                            bounds=(free_bounds_lower, free_bounds_upper),
-                            maxfev=10000
-                        )
-                        
-                        # Reconstruct full parameter list
-                        fitted_params = []
-                        free_idx = 0
-                        
-                        for i, is_fixed in enumerate(fixed_flags):
-                            if is_fixed:
-                                fitted_params.append(current_params[i])
-                            else:
-                                fitted_params.append(popt_free[free_idx])
-                                free_idx += 1
-                        
-                        st.session_state.fitted_params[data_label] = fitted_params
-                        st.success("Constrained fitting completed!")
-                    else:
-                        st.warning("All parameters are fixed - nothing to fit!")
-                        
-                except Exception as e:
-                    st.error(f"Constrained fitting failed: {str(e)}")
-            
-            params = []
-            for i in range(n_gaussians):
-                st.sidebar.subheader(f"Gaussian {i+1}")
-                
-                # Get current parameters
-                current_params = st.session_state.fitted_params[data_label]
-                fixed_flags = st.session_state.fixed_params[data_label]
-                
-                # Create columns for parameter and fix checkbox
-                col1, col2 = st.sidebar.columns([3, 1])
-                
-                with col1:
-                    amplitude = st.number_input(
-                        f"Amplitude {i+1}",
-                        min_value=0.0,
-                        max_value=plot_data['Scaled Intensity'].max() * 2,
-                        value=float(current_params[i*3]),
-                        step=plot_data['Scaled Intensity'].max() / 100,
-                        format="%.2f",
-                        key=f"amp_{i}_{data_label}"
-                    )
-                
-                with col2:
-                    fix_amp = st.checkbox(
-                        "Fix",
-                        value=fixed_flags[i*3],
-                        key=f"fix_amp_{i}_{data_label}"
-                    )
-                    st.session_state.fixed_params[data_label][i*3] = fix_amp
-                
-                col1, col2 = st.sidebar.columns([3, 1])
-                
-                with col1:
-                    center = st.number_input(
-                        f"Center {i+1}",
-                        min_value=float(plot_data['CCS'].min()),
-                        max_value=float(plot_data['CCS'].max()),
-                        value=float(current_params[i*3+1]),
-                        step=(plot_data['CCS'].max() - plot_data['CCS'].min()) / 1000,
-                        format="%.3f",
-                        key=f"center_{i}_{data_label}"
-                    )
-                
-                with col2:
-                    fix_center = st.checkbox(
-                        "Fix",
-                        value=fixed_flags[i*3+1],
-                        key=f"fix_center_{i}_{data_label}"
-                    )
-                    st.session_state.fixed_params[data_label][i*3+1] = fix_center
-                
-                col1, col2 = st.sidebar.columns([3, 1])
-                
-                with col1:
-                    width = st.number_input(
-                        f"Width {i+1}",
-                        min_value=0.1,
-                        max_value=(plot_data['CCS'].max() - plot_data['CCS'].min()) / 2,
-                        value=float(current_params[i*3+2]),
-                        step=0.1,
-                        format="%.3f",
-                        key=f"width_{i}_{data_label}"
-                    )
-                
-                with col2:
-                    fix_width = st.checkbox(
-                        "Fix",
-                        value=fixed_flags[i*3+2],
-                        key=f"fix_width_{i}_{data_label}"
-                    )
-                    st.session_state.fixed_params[data_label][i*3+2] = fix_width
-                
-                params.extend([amplitude, center, width])
-            
-            # Update session state
-            st.session_state.fitted_params[data_label] = params
-            
-            # Create plot
-            col1, col2 = st.columns([3, 1])
-            
-            with col1:
-                # Generate fitted curve
-                x_fit = np.linspace(plot_data['CCS'].min(), plot_data['CCS'].max(), 1000)
-                y_fit = multi_gaussian(x_fit, *params)
-                
-                # Individual Gaussians
-                individual_gaussians = []
-                for i in range(n_gaussians):
-                    y_individual = gaussian(x_fit, params[i*3], params[i*3+1], params[i*3+2])
-                    individual_gaussians.append(y_individual)
-                
-                # Create plot
-                fig = go.Figure()
-                
-                # Add original data
-                fig.add_trace(go.Scatter(
-                    x=plot_data['CCS'],
-                    y=plot_data['Scaled Intensity'],
-                    mode='markers',
-                    name='Data',
-                    marker=dict(color='blue', size=6)
-                ))
-                
-                # Add individual Gaussians
-                colors = px.colors.qualitative.Set1
-                for i, y_individual in enumerate(individual_gaussians):
-                    fig.add_trace(go.Scatter(
-                        x=x_fit,
-                        y=y_individual,
-                        mode='lines',
-                        name=f'Gaussian {i+1}',
-                        line=dict(color=colors[i % len(colors)], dash='dash')
-                    ))
-                
-                # Add fitted curve
-                fig.add_trace(go.Scatter(
-                    x=x_fit,
-                    y=y_fit,
-                    mode='lines',
-                    name='Total Fit',
-                    line=dict(color='red', width=3)
-                ))
-                
-                fig.update_layout(
-                    title=f'Gaussian Fitting - {data_label}',
-                    xaxis_title='CCS (Å²)',
-                    yaxis_title='Scaled Intensity',
-                    height=600,
-                    showlegend=True
-                )
-                
-                st.plotly_chart(fig, use_container_width=True)
-            
-            with col2:
-                # Fit statistics
-                st.subheader("📈 Fit Statistics")
-                
-                # Calculate R-squared
-                y_data_interp = np.interp(x_fit, plot_data['CCS'], plot_data['Scaled Intensity'])
-                ss_res = np.sum((y_data_interp - y_fit) ** 2)
-                ss_tot = np.sum((y_data_interp - np.mean(y_data_interp)) ** 2)
-                r_squared = 1 - (ss_res / ss_tot) if ss_tot != 0 else 0
-                rmse = np.sqrt(np.mean((y_data_interp - y_fit)**2))
-                
-                st.metric("R²", f"{r_squared:.4f}")
-                st.metric("RMSE", f"{rmse:.2f}")
-                
-                # Save current fit button for individual charge states
-                if mode == "Individual Charge State":
-                    if st.button("💾 Save Current Fit"):
-                        save_fit_result(selected_charge, params, n_gaussians, r_squared, rmse)
-                        st.success(f"Fit saved for Charge {selected_charge}!")
-                
-                # Parameter summary
-                st.subheader("📋 Parameters")
-                param_df = pd.DataFrame({
-                    'Gaussian': [i+1 for i in range(n_gaussians)],
-                    'Amplitude': [params[i*3] for i in range(n_gaussians)],
-                    'Center': [params[i*3+1] for i in range(n_gaussians)],
-                    'Width': [params[i*3+2] for i in range(n_gaussians)]
+    
+    with col2:
+        # Download summary statistics CSV
+        if st.button("📊 Summary Stats CSV") and st.session_state.all_fit_results:
+            summary_rows = []
+            for charge, result in st.session_state.all_fit_results.items():
+                summary_rows.append({
+                    'Charge': charge,
+                    'N_Gaussians': result['n_gaussians'],
+                    'R_squared': result['r_squared'],
+                    'RMSE': result['rmse'],
+                    'Peak_Centers': ', '.join([f"{p['center']:.3f}" for p in result['parameters']]),
+                    'Peak_Amplitudes': ', '.join([f"{p['amplitude']:.3f}" for p in result['parameters']]),
+                    'Peak_Widths': ', '.join([f"{p['width']:.3f}" for p in result['parameters']])
                 })
+            
+            summary_df = pd.DataFrame(summary_rows)
+            csv_buffer = io.StringIO()
+            summary_df.to_csv(csv_buffer, index=False)
+            
+            st.download_button(
+                label="📥 Download Summary CSV",
+                data=csv_buffer.getvalue(),
+                file_name="gaussian_fits_summary.csv",
+                mime="text/csv"
+            )
+    
+    with col3:
+        # Download all as JSON
+        if st.button("📄 All Data JSON") and st.session_state.all_fit_results:
+            all_results = {
+                'metadata': {
+                    'total_charges': len(st.session_state.all_fit_results),
+                    'charge_states': sorted(list(st.session_state.all_fit_results.keys())),
+                    'export_timestamp': pd.Timestamp.now().isoformat()
+                },
+                'fits': st.session_state.all_fit_results
+            }
+            
+            json_str = json.dumps(all_results, indent=2)
+            st.download_button(
+                label="📥 Download JSON",
+                data=json_str,
+                file_name="all_gaussian_fits.json",
+                mime="application/json"
+            )
+    
+    with col4:
+        # Download current charge fit data
+        if st.button("📈 Current Fit Data"):
+            fit_df = pd.DataFrame({
+                'CCS': x_fit,
+                'Total_Fit': y_fit,
+                'Charge': selected_charge
+            })
+            
+            # Add individual Gaussians
+            for i in range(n_gaussians):
+                fit_df[f'Gaussian_{i+1}'] = individual_gaussians[i]
+            
+            csv_buffer = io.StringIO()
+            fit_df.to_csv(csv_buffer, index=False)
+            
+            st.download_button(
+                label="📥 Download Current CSV",
+                data=csv_buffer.getvalue(),
+                file_name=f"fit_data_charge_{selected_charge}.csv",
+                mime="text/csv"
+            )
+    
+    # Show detailed results table
+    if st.session_state.all_fit_results:
+        st.subheader("📊 All Fitted Results")
+        
+        # Create expandable sections for each charge
+        for charge in sorted(st.session_state.all_fit_results.keys()):
+            result = st.session_state.all_fit_results[charge]
+            
+            with st.expander(f"Charge {charge} - {result['n_gaussians']} Gaussians (R² = {result['r_squared']:.4f})"):
+                cols = st.columns([1, 1, 1, 1])
+                cols[0].metric("R²", f"{result['r_squared']:.4f}")
+                cols[1].metric("RMSE", f"{result['rmse']:.3f}")
+                cols[2].metric("Gaussians", result['n_gaussians'])
+                cols[3].metric("Charge", charge)
+                
+                # Parameters table
+                param_data = []
+                for param in result['parameters']:
+                    param_data.append({
+                        'Gaussian': param['gaussian'],
+                        'Amplitude': f"{param['amplitude']:.3f}",
+                        'Center': f"{param['center']:.3f}",
+                        'Width': f"{param['width']:.3f}"
+                    })
+                
+                param_df = pd.DataFrame(param_data)
                 st.dataframe(param_df, use_container_width=True)
-            
-            # Export section
-            st.header("💾 Export Results")
-            
-            if mode == "Individual Charge State":
-                # Multi-charge export options
-                col1, col2, col3, col4 = st.columns(4)
-                
-                with col1:
-                    # Download current fit parameters
-                    if st.button("📊 Download Current"):
-                        param_dict = {
-                            'data_label': data_label,
-                            'charge': selected_charge,
-                            'n_gaussians': n_gaussians,
-                            'r_squared': r_squared,
-                            'rmse': rmse,
-                            'parameters': []
-                        }
-                        
-                        for i in range(n_gaussians):
-                            param_dict['parameters'].append({
-                                'gaussian': i+1,
-                                'amplitude': params[i*3],
-                                'center': params[i*3+1],
-                                'width': params[i*3+2]
-                            })
-                        
-                        json_str = json.dumps(param_dict, indent=2)
-                        st.download_button(
-                            label="Download JSON",
-                            data=json_str,
-                            file_name=f"gaussian_fit_charge_{selected_charge}.json",
-                            mime="application/json"
-                        )
-                
-                with col2:
-                    # Download all saved fits
-                    if st.button("📚 Download All Saved") and st.session_state.all_fit_results:
-                        all_results = {
-                            'dataset_info': {
-                                'total_charges': len(st.session_state.all_fit_results),
-                                'charge_states': list(st.session_state.all_fit_results.keys())
-                            },
-                            'fits': st.session_state.all_fit_results
-                        }
-                        
-                        json_str = json.dumps(all_results, indent=2)
-                        st.download_button(
-                            label="Download All JSON",
-                            data=json_str,
-                            file_name="all_gaussian_fits.json",
-                            mime="application/json"
-                        )
-                
-                with col3:
-                    # Download all as CSV summary
-                    if st.button("📋 Download CSV Summary") and st.session_state.all_fit_results:
-                        # Create summary DataFrame
-                        summary_rows = []
-                        for charge, result in st.session_state.all_fit_results.items():
-                            for param in result['parameters']:
-                                summary_rows.append({
-                                    'Charge': charge,
-                                    'Gaussian': param['gaussian'],
-                                    'Amplitude': param['amplitude'],
-                                    'Center': param['center'],
-                                    'Width': param['width'],
-                                    'R_squared': result['r_squared'],
-                                    'RMSE': result['rmse'],
-                                    'N_Gaussians': result['n_gaussians']
-                                })
-                        
-                        summary_df = pd.DataFrame(summary_rows)
-                        csv_buffer = io.StringIO()
-                        summary_df.to_csv(csv_buffer, index=False)
-                        
-                        st.download_button(
-                            label="Download CSV",
-                            data=csv_buffer.getvalue(),
-                            file_name="gaussian_fits_summary.csv",
-                            mime="text/csv"
-                        )
-                
-                with col4:
-                    # Download fit data for current charge
-                    if st.button("📈 Download Fit Data"):
-                        fit_df = pd.DataFrame({
-                            'CCS': x_fit,
-                            'Fitted_Intensity': y_fit,
-                            'Charge': selected_charge
-                        })
-                        
-                        # Add individual Gaussians
-                        for i in range(n_gaussians):
-                            fit_df[f'Gaussian_{i+1}'] = individual_gaussians[i]
-                        
-                        csv_buffer = io.StringIO()
-                        fit_df.to_csv(csv_buffer, index=False)
-                        
-                        label="Download CSV",
-                            data=csv_buffer.getvalue(),
-                            file_name=f"fit_data_charge_{selected_charge}.csv",
-                            mime="text/csv"
-                        )
-                
-                # Show saved results summary
-                if st.session_state.all_fit_results:
-                    st.subheader("📊 Saved Results Summary")
-                    summary_data = []
-                    for charge, result in st.session_state.all_fit_results.items():
-                        summary_data.append({
-                            'Charge': charge,
-                            'Gaussians': result['n_gaussians'],
-                            'R²': f"{result['r_squared']:.4f}",
-                            'RMSE': f"{result['rmse']:.2f}"
-                        })
-                    
-                    summary_df = pd.DataFrame(summary_data)
-                    st.dataframe(summary_df, use_container_width=True)
             
             else:  # Summed data mode
                 col1, col2 = st.columns(2)
