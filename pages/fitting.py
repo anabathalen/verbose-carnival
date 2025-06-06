@@ -68,39 +68,145 @@ def create_summed_data(df):
     return summed_df
 
 def auto_fit_gaussians(x, y, n_gaussians):
-    """Automatically fit Gaussians to the data"""
+    """Automatically fit Gaussians to the data using local maxima"""
     try:
-        # Find peaks for initial guesses
-        from scipy.signal import find_peaks
-        peaks, _ = find_peaks(y, height=np.max(y)*0.1, distance=len(y)//20)
+        from scipy.signal import find_peaks, peak_prominences
         
-        # If we don't find enough peaks, distribute them evenly
-        if len(peaks) < n_gaussians:
-            peaks = np.linspace(len(y)//10, len(y)-len(y)//10, n_gaussians, dtype=int)
+        # Smooth the data slightly to reduce noise in peak detection
+        from scipy.ndimage import gaussian_filter1d
+        y_smooth = gaussian_filter1d(y, sigma=1)
         
-        # Take the top n_gaussians peaks
-        peak_heights = y[peaks]
-        top_peaks = peaks[np.argsort(peak_heights)[::-1][:n_gaussians]]
+        # Find all local maxima with various criteria
+        # Use multiple criteria to catch different types of peaks
+        min_height = np.max(y) * 0.05  # 5% of max height
+        min_distance = max(1, len(y) // 50)  # Minimum distance between peaks
         
-        # Initial parameters
+        # Find peaks with prominence to avoid noise
+        peaks, properties = find_peaks(
+            y_smooth, 
+            height=min_height,
+            distance=min_distance,
+            prominence=np.max(y) * 0.02  # 2% prominence
+        )
+        
+        if len(peaks) == 0:
+            # If no peaks found, try with lower thresholds
+            peaks, _ = find_peaks(y_smooth, distance=min_distance)
+        
+        # Calculate peak prominences to rank them
+        if len(peaks) > 0:
+            prominences = peak_prominences(y_smooth, peaks)[0]
+            # Sort peaks by prominence (more prominent = better peak)
+            peak_ranking = np.argsort(prominences)[::-1]
+            ranked_peaks = peaks[peak_ranking]
+        else:
+            ranked_peaks = []
+        
+        # Select the best peaks up to n_gaussians
+        if len(ranked_peaks) >= n_gaussians:
+            selected_peaks = ranked_peaks[:n_gaussians]
+        else:
+            # If we don't have enough peaks, add some at reasonable locations
+            selected_peaks = list(ranked_peaks)
+            
+            # Find gaps in the data where we might place additional Gaussians
+            if len(selected_peaks) > 0:
+                # Sort selected peaks by position
+                selected_peaks.sort()
+                # Add peaks in the largest gaps
+                while len(selected_peaks) < n_gaussians:
+                    gaps = []
+                    for i in range(len(selected_peaks) + 1):
+                        if i == 0:
+                            start_idx = 0
+                        else:
+                            start_idx = selected_peaks[i-1]
+                        
+                        if i == len(selected_peaks):
+                            end_idx = len(x) - 1
+                        else:
+                            end_idx = selected_peaks[i]
+                        
+                        gap_size = end_idx - start_idx
+                        gap_center = (start_idx + end_idx) // 2
+                        gaps.append((gap_size, gap_center))
+                    
+                    # Add peak at the center of the largest gap
+                    largest_gap = max(gaps, key=lambda x: x[0])
+                    selected_peaks.append(largest_gap[1])
+                    selected_peaks.sort()
+            else:
+                # No peaks found at all, distribute evenly
+                selected_peaks = np.linspace(len(y)//10, len(y)-len(y)//10, n_gaussians, dtype=int)
+        
+        # Convert indices back to sorted order for parameter extraction
+        selected_peaks = sorted(selected_peaks)
+        
+        # Initial parameters using the actual peak values
         initial_params = []
-        for peak in top_peaks:
-            amplitude = y[peak]
-            center = x[peak]
-            width = (x.max() - x.min()) / (n_gaussians * 4)  # Reasonable width guess
+        for peak_idx in selected_peaks:
+            # Use actual peak height as amplitude
+            amplitude = y[peak_idx]
+            center = x[peak_idx]
+            
+            # Estimate width based on peak shape
+            # Look for half-maximum points around the peak
+            half_max = amplitude / 2
+            
+            # Search left and right for half-maximum
+            left_idx = peak_idx
+            right_idx = peak_idx
+            
+            # Search left
+            while left_idx > 0 and y[left_idx] > half_max:
+                left_idx -= 1
+            
+            # Search right  
+            while right_idx < len(y) - 1 and y[right_idx] > half_max:
+                right_idx += 1
+            
+            # Calculate FWHM-based width
+            if right_idx > left_idx:
+                fwhm = x[right_idx] - x[left_idx]
+                width = fwhm / (2 * np.sqrt(2 * np.log(2)))  # Convert FWHM to sigma
+            else:
+                # Fallback width
+                width = (x.max() - x.min()) / (n_gaussians * 4)
+            
+            # Ensure reasonable width bounds
+            min_width = (x.max() - x.min()) / 100
+            max_width = (x.max() - x.min()) / 2
+            width = np.clip(width, min_width, max_width)
+            
             initial_params.extend([amplitude, center, width])
         
-        # Fit the curve
-        popt, _ = curve_fit(multi_gaussian, x, y, p0=initial_params, maxfev=5000)
+        # Fit the curve with the improved initial guesses
+        popt, _ = curve_fit(
+            multi_gaussian, 
+            x, y, 
+            p0=initial_params, 
+            maxfev=10000,
+            bounds=(
+                # Lower bounds: [amp_min, center_min, width_min] for each Gaussian
+                [0, x.min(), 0.1] * n_gaussians,
+                # Upper bounds: [amp_max, center_max, width_max] for each Gaussian  
+                [y.max() * 2, x.max(), (x.max() - x.min())] * n_gaussians
+            )
+        )
         
         return popt
-    except:
-        # If fitting fails, return reasonable defaults
+        
+    except Exception as e:
+        # If fitting fails, return reasonable defaults based on data
+        print(f"Auto-fitting failed: {e}, using defaults")
         x_range = x.max() - x.min()
         centers = np.linspace(x.min() + x_range/4, x.max() - x_range/4, n_gaussians)
         params = []
         for center in centers:
-            params.extend([y.max()/n_gaussians, center, x_range/(n_gaussians*4)])
+            # Use a reasonable amplitude based on data
+            center_idx = np.argmin(np.abs(x - center))
+            amplitude = y[center_idx] if center_idx < len(y) else y.max()/n_gaussians
+            params.extend([amplitude, center, x_range/(n_gaussians*4)])
         return params
 
 def main():
