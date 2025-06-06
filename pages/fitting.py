@@ -209,6 +209,27 @@ def auto_fit_gaussians(x, y, n_gaussians):
             params.extend([amplitude, center, x_range/(n_gaussians*4)])
         return params
 
+def save_fit_result(charge_state, params, n_gaussians, r_squared, rmse):
+    """Save a fit result to the session state"""
+    if 'all_fit_results' not in st.session_state:
+        st.session_state.all_fit_results = {}
+    
+    st.session_state.all_fit_results[charge_state] = {
+        'charge': charge_state,
+        'n_gaussians': n_gaussians,
+        'r_squared': r_squared,
+        'rmse': rmse,
+        'parameters': []
+    }
+    
+    for i in range(n_gaussians):
+        st.session_state.all_fit_results[charge_state]['parameters'].append({
+            'gaussian': i+1,
+            'amplitude': params[i*3],
+            'center': params[i*3+1],
+            'width': params[i*3+2]
+        })
+
 def main():
     st.title("🔍 Gaussian Fitting Tool")
     st.markdown("Fit Gaussian curves to your calibrated data with interactive controls")
@@ -239,6 +260,27 @@ def main():
                 "Analysis Mode",
                 ["Individual Charge State", "Summed Data"]
             )
+            
+            # Initialize all_fit_results if not exists
+            if 'all_fit_results' not in st.session_state:
+                st.session_state.all_fit_results = {}
+            
+            # Show multi-charge results management for individual mode
+            if mode == "Individual Charge State":
+                st.sidebar.header("🗂️ Multi-Charge Results")
+                
+                # Show currently saved results
+                if st.session_state.all_fit_results:
+                    st.sidebar.write("**Saved Fits:**")
+                    for charge, result in st.session_state.all_fit_results.items():
+                        st.sidebar.write(f"• Charge {charge}: {result['n_gaussians']} Gaussians (R² = {result['r_squared']:.3f})")
+                
+                # Clear all results button
+                if st.sidebar.button("🗑️ Clear All Saved Results"):
+                    st.session_state.all_fit_results = {}
+                    st.sidebar.success("All results cleared!")
+                
+                st.sidebar.markdown("---")
             
             # Prepare data based on mode
             if mode == "Individual Charge State":
@@ -553,9 +595,16 @@ def main():
                 ss_res = np.sum((y_data_interp - y_fit) ** 2)
                 ss_tot = np.sum((y_data_interp - np.mean(y_data_interp)) ** 2)
                 r_squared = 1 - (ss_res / ss_tot) if ss_tot != 0 else 0
+                rmse = np.sqrt(np.mean((y_data_interp - y_fit)**2))
                 
                 st.metric("R²", f"{r_squared:.4f}")
-                st.metric("RMSE", f"{np.sqrt(np.mean((y_data_interp - y_fit)**2)):.2f}")
+                st.metric("RMSE", f"{rmse:.2f}")
+                
+                # Save current fit button for individual charge states
+                if mode == "Individual Charge State":
+                    if st.button("💾 Save Current Fit"):
+                        save_fit_result(selected_charge, params, n_gaussians, r_squared, rmse)
+                        st.success(f"Fit saved for Charge {selected_charge}!")
                 
                 # Parameter summary
                 st.subheader("📋 Parameters")
@@ -570,128 +619,196 @@ def main():
             # Export section
             st.header("💾 Export Results")
             
-            col1, col2, col3 = st.columns(3)
-            
-            with col1:
-                # Download fit parameters
-                if st.button("📊 Download Parameters"):
-                    param_dict = {
-                        'data_label': data_label,
-                        'n_gaussians': n_gaussians,
-                        'r_squared': r_squared,
-                        'parameters': []
-                    }
-                    
-                    for i in range(n_gaussians):
-                        param_dict['parameters'].append({
-                            'gaussian': i+1,
-                            'amplitude': params[i*3],
-                            'center': params[i*3+1],
-                            'width': params[i*3+2]
+            if mode == "Individual Charge State":
+                # Multi-charge export options
+                col1, col2, col3, col4 = st.columns(4)
+                
+                with col1:
+                    # Download current fit parameters
+                    if st.button("📊 Download Current"):
+                        param_dict = {
+                            'data_label': data_label,
+                            'charge': selected_charge,
+                            'n_gaussians': n_gaussians,
+                            'r_squared': r_squared,
+                            'rmse': rmse,
+                            'parameters': []
+                        }
+                        
+                        for i in range(n_gaussians):
+                            param_dict['parameters'].append({
+                                'gaussian': i+1,
+                                'amplitude': params[i*3],
+                                'center': params[i*3+1],
+                                'width': params[i*3+2]
+                            })
+                        
+                        json_str = json.dumps(param_dict, indent=2)
+                        st.download_button(
+                            label="Download JSON",
+                            data=json_str,
+                            file_name=f"gaussian_fit_charge_{selected_charge}.json",
+                            mime="application/json"
+                        )
+                
+                with col2:
+                    # Download all saved fits
+                    if st.button("📚 Download All Saved") and st.session_state.all_fit_results:
+                        all_results = {
+                            'dataset_info': {
+                                'total_charges': len(st.session_state.all_fit_results),
+                                'charge_states': list(st.session_state.all_fit_results.keys())
+                            },
+                            'fits': st.session_state.all_fit_results
+                        }
+                        
+                        json_str = json.dumps(all_results, indent=2)
+                        st.download_button(
+                            label="Download All JSON",
+                            data=json_str,
+                            file_name="all_gaussian_fits.json",
+                            mime="application/json"
+                        )
+                
+                with col3:
+                    # Download all as CSV summary
+                    if st.button("📋 Download CSV Summary") and st.session_state.all_fit_results:
+                        # Create summary DataFrame
+                        summary_rows = []
+                        for charge, result in st.session_state.all_fit_results.items():
+                            for param in result['parameters']:
+                                summary_rows.append({
+                                    'Charge': charge,
+                                    'Gaussian': param['gaussian'],
+                                    'Amplitude': param['amplitude'],
+                                    'Center': param['center'],
+                                    'Width': param['width'],
+                                    'R_squared': result['r_squared'],
+                                    'RMSE': result['rmse'],
+                                    'N_Gaussians': result['n_gaussians']
+                                })
+                        
+                        summary_df = pd.DataFrame(summary_rows)
+                        csv_buffer = io.StringIO()
+                        summary_df.to_csv(csv_buffer, index=False)
+                        
+                        st.download_button(
+                            label="Download CSV",
+                            data=csv_buffer.getvalue(),
+                            file_name="gaussian_fits_summary.csv",
+                            mime="text/csv"
+                        )
+                
+                with col4:
+                    # Download fit data for current charge
+                    if st.button("📈 Download Fit Data"):
+                        fit_df = pd.DataFrame({
+                            'CCS': x_fit,
+                            'Fitted_Intensity': y_fit,
+                            'Charge': selected_charge
+                        })
+                        
+                        # Add individual Gaussians
+                        for i in range(n_gaussians):
+                            fit_df[f'Gaussian_{i+1}'] = individual_gaussians[i]
+                        
+                        csv_buffer = io.StringIO()
+                        fit_df.to_csv(csv_buffer, index=False)
+                        
+                        label="Download CSV",
+                            data=csv_buffer.getvalue(),
+                            file_name=f"fit_data_charge_{selected_charge}.csv",
+                            mime="text/csv"
+                        )
+                
+                # Show saved results summary
+                if st.session_state.all_fit_results:
+                    st.subheader("📊 Saved Results Summary")
+                    summary_data = []
+                    for charge, result in st.session_state.all_fit_results.items():
+                        summary_data.append({
+                            'Charge': charge,
+                            'Gaussians': result['n_gaussians'],
+                            'R²': f"{result['r_squared']:.4f}",
+                            'RMSE': f"{result['rmse']:.2f}"
                         })
                     
-                    json_str = json.dumps(param_dict, indent=2)
-                    st.download_button(
-                        label="Download JSON",
-                        data=json_str,
-                        file_name=f"gaussian_fit_params_{data_label.replace(' ', '_')}.json",
-                        mime="application/json"
-                    )
+                    summary_df = pd.DataFrame(summary_data)
+                    st.dataframe(summary_df, use_container_width=True)
             
-            with col2:
-                # Download fitted data
-                if st.button("📈 Download Fit Data"):
-                    fit_df = pd.DataFrame({
-                        'CCS': x_fit,
-                        'Fitted_Intensity': y_fit
-                    })
-                    
-                    # Add individual Gaussians
-                    for i in range(n_gaussians):
-                        fit_df[f'Gaussian_{i+1}'] = individual_gaussians[i]
-                    
-                    csv_buffer = io.StringIO()
-                    fit_df.to_csv(csv_buffer, index=False)
-                    
-                    st.download_button(
-                        label="Download CSV",
-                        data=csv_buffer.getvalue(),
-                        file_name=f"gaussian_fit_data_{data_label.replace(' ', '_')}.csv",
-                        mime="text/csv"
-                    )
-            
-            with col3:
-                # Download high-quality plot
-                if st.button("🎨 Download Plot"):
-                    # Create a high-quality version of the plot
-                    fig_hq = go.Figure()
-                    
-                    # Add original data
-                    fig_hq.add_trace(go.Scatter(
-                        x=plot_data['CCS'],
-                        y=plot_data['Scaled Intensity'],
-                        mode='markers',
-                        name='Experimental Data',
-                        marker=dict(color='blue', size=8)
-                    ))
-                    
-                    # Add individual Gaussians
-                    for i, y_individual in enumerate(individual_gaussians):
-                        fig_hq.add_trace(go.Scatter(
-                            x=x_fit,
-                            y=y_individual,
-                            mode='lines',
-                            name=f'Gaussian {i+1}',
-                            line=dict(color=colors[i % len(colors)], dash='dash', width=2)
-                        ))
-                    
-                    # Add fitted curve
-                    fig_hq.add_trace(go.Scatter(
-                        x=x_fit,
-                        y=y_fit,
-                        mode='lines',
-                        name='Total Fit',
-                        line=dict(color='red', width=4)
-                    ))
-                    
-                    fig_hq.update_layout(
-                        title=f'Gaussian Fitting - {data_label} (R² = {r_squared:.4f})',
-                        xaxis_title='CCS (Å²)',
-                        yaxis_title='Scaled Intensity',
-                        width=1200,
-                        height=800,
-                        font=dict(size=14),
-                        showlegend=True,
-                        legend=dict(x=0.02, y=0.98),
-                        template='plotly_white'
-                    )
-                    
-                    # Convert to HTML
-                    fig_html = fig_hq.to_html(include_plotlyjs='cdn')
-                    
-                    st.download_button(
-                        label="Download HTML",
-                        data=fig_html,
-                        file_name=f"gaussian_fit_plot_{data_label.replace(' ', '_')}.html",
-                        mime="text/html"
-                    )
-            
+            else:  # Summed data mode
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    # Download summed fit parameters
+                    if st.button("📊 Download Parameters"):
+                        param_dict = {
+                            'data_label': data_label,
+                            'mode': 'summed',
+                            'n_gaussians': n_gaussians,
+                            'r_squared': r_squared,
+                            'rmse': rmse,
+                            'parameters': []
+                        }
+                        
+                        for i in range(n_gaussians):
+                            param_dict['parameters'].append({
+                                'gaussian': i+1,
+                                'amplitude': params[i*3],
+                                'center': params[i*3+1],
+                                'width': params[i*3+2]
+                            })
+                        
+                        json_str = json.dumps(param_dict, indent=2)
+                        st.download_button(
+                            label="Download JSON",
+                            data=json_str,
+                            file_name="gaussian_fit_summed_data.json",
+                            mime="application/json"
+                        )
+                
+                with col2:
+                    # Download summed fit data
+                    if st.button("📈 Download Fit Data"):
+                        fit_df = pd.DataFrame({
+                            'CCS': x_fit,
+                            'Fitted_Intensity': y_fit
+                        })
+                        
+                        # Add individual Gaussians
+                        for i in range(n_gaussians):
+                            fit_df[f'Gaussian_{i+1}'] = individual_gaussians[i]
+                        
+                        csv_buffer = io.StringIO()
+                        fit_df.to_csv(csv_buffer, index=False)
+                        
+                        st.download_button(
+                            label="Download CSV",
+                            data=csv_buffer.getvalue(),
+                            file_name="fit_data_summed.csv",
+                            mime="text/csv"
+                        )
+        
         except Exception as e:
             st.error(f"Error processing file: {str(e)}")
-            st.error("Please check that your CSV file has the required columns: Charge, CCS, Scaled Intensity")
+            st.error("Please ensure your CSV has the required columns: Charge, CCS, Scaled Intensity")
     
     else:
-        st.info("👆 Please upload a calibrated CSV file to begin fitting")
+        st.info("👆 Please upload a CSV file to get started")
+        st.markdown("""
+        ### Required CSV Format:
+        Your file should contain these columns:
+        - **Charge**: Charge state values
+        - **CCS**: Collision Cross Section values
+        - **Scaled Intensity**: Intensity values
         
-        # Show example data format
-        st.subheader("Expected Data Format")
-        example_df = pd.DataFrame({
-            'Charge': [14, 14, 14, 15, 15, 15],
-            'CCS': [966.6, 1113.2, 1233.8, 1050.2, 1180.5, 1290.1],
-            'Scaled Intensity': [27474, 19029, 9582, 31200, 22150, 11890],
-            'Drift': [0.000182, 0.000364, 0.000547, 0.000201, 0.000401, 0.000601]
-        })
-        st.dataframe(example_df)
+        ### Features:
+        - 🔄 **Auto-fit**: Automatically detect peaks and fit Gaussians
+        - 🎛️ **Manual Control**: Fine-tune parameters with interactive sliders
+        - 🔒 **Fix Parameters**: Lock specific parameters during fitting
+        - 📊 **Individual/Summed**: Analyze single charge states or summed data
+        - 💾 **Multi-Export**: Save results in JSON, CSV, or combined formats
+        """)
 
 if __name__ == "__main__":
     main()
