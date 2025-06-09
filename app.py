@@ -214,7 +214,7 @@ with body:
     st.markdown("""
     <div class="info-card">
         <p><strong>Welcome!</strong> This site hosts tools for logging peer-reviewed protein CCS values. While it is in development, it also hosts tools for processing IM-MS data so that users can use/test them, but these will be separated in the final version. </p> 
-        <p>The relationship between protein structure and collision cross section has been the subject of lots of research, both targeted (e.g. experiments in the Jarrold laboratory on secondary structure in the gas phase) and untargeted (e.g. work by Beveridge and France in our group looking at collision cross sections of standard proteins). This work has established trends in native ion mobility-mass spectrometry data, a selection of which are shown in the figure below.</p>
+        <p>The relationship between protein structure and collision cross section has been the subject of lots of research, both targeted (e.g. experiments in the Jarrold laboratory on secondary structure in the gas phase) and untargeted (e.g. work by Beveridge and France in our group looking at collision cross sections of standard proteins). This work has established trends in native ion mobility-mass spectrometry data, a selection of which are shown in the figure below (or just a blue box with a question mark in for reasons unknown).</p>
     </div>
     """, unsafe_allow_html=True)
     
