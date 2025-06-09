@@ -220,17 +220,17 @@ with body:
     
     # Try to display the image using st.image instead
     try:
-        st.image("data/Beveridge Trends.png", caption="Beveridge Trends", use_column_width=True)
+        st.image("data/Beveridge\ Trends.png", caption="Beveridge Trends", use_column_width=True)
     except:
         try:
-            st.image("Beveridge Trends.png", caption="Beveridge Trends", use_column_width=True)
+            st.image("Beveridge\ Trends.png", caption="Beveridge Trends", use_column_width=True)
         except:
             st.warning("⚠️ Could not load Beveridge Trends image. Please check the file path.")
     
     st.markdown("""
     <div class="info-card">
         <p>By building this database, we will learn more about this relationship, particularly for intrinsically disordered proteins where structure prediction tools are less well developed. </p>  
-        <p>McLean and coworkers have established a similar database for small molecules measured with drift tube-mass spectrometers, and used the results to establish trends in CCS within chemical classes which can be used to filter candidate structures in untargeted workflows (<a href="https://lab.vanderbilt.edu/mclean-group/collision-cross-section-database" target="_blank">Collision Cross Section Database</a>). This database aims to establish similar trends for larger biomolecules. Databases published by Bush, Clemmer and Xu provide CCS values for standard proteins measured on drift tube-mass spectrometers used to calibrate travelling-wave IMS measurements. We hope that by broadening the criteria (including values for any protein on any IM-MS instrument), we can generate a broader overview of protein IM-MS literature, but we acknowledge the previously noted variability in published CCS values for the same 'native' protein. </p> 
+        <p>McLean and coworkers have established a similar database for small molecules measured with drift tube-mass spectrometers, and used the results to establish trends in CCS within chemical classes which can be used to filter candidate structures in untargeted workflows (<a href="https://lab.vanderbilt.edu/mclean-group/collision-cross-section-database" target="_blank">Collision Cross Section Database</a>). This database aims to establish similar trends for larger biomolecules. Resources published by Bush, Clemmer and Xu provide CCS values for standard proteins measured on drift tube-mass spectrometers used to calibrate travelling-wave IMS measurements. By broadening the criteria (including values for any protein on any IM-MS instrument), we can generate a broader overview of protein IM-MS literature, but we acknowledge the previously noted variability in published CCS values for the same 'native' protein. </p> 
         <p>If you have the time, please go to 'ccs logging' and contribute protein CCS values from peer-reviewed literature. To explore the database so far, and to view the contributors leaderboard, go to 'view data'. There will be prizes for top contributors! Feedback is strongly encouraged. Please let us know if you have any suggestions/issues in the feedback section at the bottom of the page.</p>
     </div>
     """, unsafe_allow_html=True)
