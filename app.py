@@ -220,10 +220,10 @@ with body:
     
     # Try to display the image using st.image instead
     try:
-        st.image("data/Beveridge\ Trends.png", caption="Beveridge Trends", use_column_width=True)
+        st.image("data/beveridge_trends.png", caption="Beveridge Trends", use_column_width=True)
     except:
         try:
-            st.image("Beveridge\ Trends.png", caption="Beveridge Trends", use_column_width=True)
+            st.image("beveridge_trends.png", caption="Beveridge Trends", use_column_width=True)
         except:
             st.warning("⚠️ Could not load Beveridge Trends image. Please check the file path.")
     
