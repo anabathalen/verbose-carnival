@@ -240,7 +240,7 @@ with body:
         st.switch_page("pages/1_ccs_logging.py")
 
     # Navigation button outside markdown
-    if st.button("Go to CCS Logging"):
+    if st.button("Explore Database"):
         st.switch_page("pages/2_view_data.py")
 
     st.markdown("""
