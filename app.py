@@ -193,12 +193,6 @@ st.markdown("""
         background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
     }
     
-    /* Hide default elements */
-    header[data-testid="stHeader"] {display: none;}
-    .stDeployButton {display: none;}
-    .css-1lsmgbg.e1fqkh3o3 {display: none;}
-    .css-1d391kg {padding-top: 1rem;}
-    .css-hi6a2p {padding: 0 1rem;}
 </style>
 """, unsafe_allow_html=True)
 
