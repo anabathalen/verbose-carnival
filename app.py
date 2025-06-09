@@ -14,6 +14,25 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# GitHub setup - moved to top
+try:
+    GITHUB_TOKEN = st.secrets["GITHUB_TOKEN"]
+    GITHUB_REPO = st.secrets["REPO_NAME"]
+    
+    # Constants
+    CSV_PATH = "data/feedback.csv"
+    API_URL = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{CSV_PATH}"
+    
+    # Headers for GitHub API
+    GITHUB_HEADERS = {
+        "Authorization": f"token {GITHUB_TOKEN}",
+        "Accept": "application/vnd.github+json"
+    }
+except Exception as e:
+    st.error(f"GitHub configuration error: {e}")
+    GITHUB_TOKEN = None
+    GITHUB_REPO = None
+
 # Enhanced CSS styling matching CCS logging page
 st.markdown("""
 <style>
@@ -275,66 +294,60 @@ with feedback_section:
             </div>
             """, unsafe_allow_html=True)
         else:
-            try:
-                # Load GitHub credentials
-                GITHUB_TOKEN = st.secrets["GITHUB_TOKEN"]
-                GITHUB_REPO = st.secrets["REPO_NAME"]
+            if GITHUB_TOKEN and GITHUB_REPO:
+                try:
+                    # Create entry
+                    new_entry = {
+                        "timestamp": datetime.now().isoformat(),
+                        "name": name.strip() if name else "Anonymous",
+                        "feedback": feedback.replace("\n", " ")
+                    }
 
-                # Constants
-                CSV_PATH = "data/feedback.csv"
-                API_URL = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{CSV_PATH}"
+                    # Get current CSV content from GitHub
+                    response = requests.get(API_URL, headers=GITHUB_HEADERS)
+                    if response.status_code == 200:
+                        content_json = response.json()
+                        sha = content_json["sha"]
+                        decoded_content = base64.b64decode(content_json["content"]).decode("utf-8")
+                        df = pd.read_csv(StringIO(decoded_content))
+                        df = pd.concat([df, pd.DataFrame([new_entry])], ignore_index=True)
+                    elif response.status_code == 404:
+                        sha = None
+                        df = pd.DataFrame([new_entry])
+                    else:
+                        raise Exception(f"GitHub API error: {response.status_code}, {response.text}")
 
-                # Create entry
-                new_entry = {
-                    "timestamp": datetime.now().isoformat(),
-                    "name": name.strip() if name else "Anonymous",
-                    "feedback": feedback.replace("\n", " ")
-                }
+                    # Encode and push new content
+                    updated_csv = df.to_csv(index=False)
+                    encoded_content = base64.b64encode(updated_csv.encode()).decode()
 
-                # Get current CSV content from GitHub
-                headers = {
-                    "Authorization": f"token {GITHUB_TOKEN}",
-                    "Accept": "application/vnd.github+json"
-                }
+                    payload = {
+                        "message": "Added user feedback",
+                        "content": encoded_content
+                    }
+                    if sha:
+                        payload["sha"] = sha
 
-                response = requests.get(API_URL, headers=headers)
-                if response.status_code == 200:
-                    content_json = response.json()
-                    sha = content_json["sha"]
-                    decoded_content = base64.b64decode(content_json["content"]).decode("utf-8")
-                    df = pd.read_csv(StringIO(decoded_content))
-                    df = pd.concat([df, pd.DataFrame([new_entry])], ignore_index=True)
-                elif response.status_code == 404:
-                    sha = None
-                    df = pd.DataFrame([new_entry])
-                else:
-                    raise Exception(f"GitHub API error: {response.status_code}, {response.text}")
+                    put_response = requests.put(API_URL, headers=GITHUB_HEADERS, json=payload)
+                    if put_response.status_code in [200, 201]:
+                        st.markdown("""
+                        <div class="success-message">
+                            <strong>✅ Thanks! Your feedback has been saved.</strong>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    else:
+                        raise Exception(f"GitHub update error: {put_response.status_code}, {put_response.text}")
 
-                # Encode and push new content
-                updated_csv = df.to_csv(index=False)
-                encoded_content = base64.b64encode(updated_csv.encode()).decode()
-
-                payload = {
-                    "message": "Added user feedback",
-                    "content": encoded_content
-                }
-                if sha:
-                    payload["sha"] = sha
-
-                put_response = requests.put(API_URL, headers=headers, json=payload)
-                if put_response.status_code in [200, 201]:
-                    st.markdown("""
-                    <div class="success-message">
-                        <strong>✅ Thanks! Your feedback has been saved.</strong>
+                except Exception as e:
+                    st.markdown(f"""
+                    <div class="error-message">
+                        <strong>❌ Error saving feedback:</strong> {e}
                     </div>
                     """, unsafe_allow_html=True)
-                else:
-                    raise Exception(f"GitHub update error: {put_response.status_code}, {put_response.text}")
-
-            except Exception as e:
-                st.markdown(f"""
+            else:
+                st.markdown("""
                 <div class="error-message">
-                    <strong>❌ Error saving feedback:</strong> {e}
+                    <strong>❌ GitHub configuration not available. Cannot save feedback.</strong>
                 </div>
                 """, unsafe_allow_html=True)
     
