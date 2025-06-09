@@ -21,7 +21,9 @@ try:
     
     # Constants
     CSV_PATH = "data/feedback.csv"
+    CCS_CSV_PATH = "data/collision_cross_section.csv"
     API_URL = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{CSV_PATH}"
+    CCS_API_URL = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{CCS_CSV_PATH}"
     
     # Headers for GitHub API
     GITHUB_HEADERS = {
@@ -33,6 +35,41 @@ except Exception as e:
     GITHUB_TOKEN = None
     GITHUB_REPO = None
 
+# Function to get database stats
+def get_database_stats():
+    """Get the number of entries and contributors from the CCS database"""
+    try:
+        if GITHUB_TOKEN and GITHUB_REPO:
+            # Try to get CCS data from GitHub
+            response = requests.get(CCS_API_URL, headers=GITHUB_HEADERS)
+            if response.status_code == 200:
+                content_json = response.json()
+                decoded_content = base64.b64decode(content_json["content"]).decode("utf-8")
+                df = pd.read_csv(StringIO(decoded_content))
+                
+                num_entries = len(df)
+                num_contributors = df['user_name'].nunique() if 'user_name' in df.columns else 0
+                
+                return num_entries, num_contributors
+            else:
+                # GitHub API failed, try local file
+                raise Exception("GitHub API not available")
+        else:
+            raise Exception("GitHub not configured")
+            
+    except Exception as e:
+        # Fallback to local file if GitHub fails
+        try:
+            if os.path.exists("data/collision_cross_section.csv"):
+                df = pd.read_csv("data/collision_cross_section.csv")
+                num_entries = len(df)
+                num_contributors = df['user_name'].nunique() if 'user_name' in df.columns else 0
+                return num_entries, num_contributors
+            else:
+                return 0, 0
+        except Exception as local_error:
+            return 0, 0
+
 # Enhanced CSS styling matching CCS logging page
 st.markdown("""
 <style>
@@ -40,6 +77,40 @@ st.markdown("""
     
     .stApp {
         font-family: 'Inter', sans-serif;
+    }
+    
+    .stats-banner {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        padding: 1rem 1.5rem;
+        border-radius: 12px;
+        margin-bottom: 1.5rem;
+        color: white;
+        text-align: center;
+        box-shadow: 0 4px 20px rgba(16, 185, 129, 0.3);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 3rem;
+    }
+    
+    .stat-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .stat-number {
+        font-size: 2.5rem;
+        font-weight: 600;
+        margin: 0;
+        line-height: 1;
+    }
+    
+    .stat-label {
+        font-size: 1rem;
+        opacity: 0.9;
+        margin: 0.2rem 0 0 0;
+        font-weight: 500;
     }
     
     .main-header {
@@ -193,11 +264,27 @@ st.markdown("""
         background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
     }
     
+    /* Responsive stats banner */
+    @media (max-width: 768px) {
+        .stats-banner {
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+        }
+    }
+    
 </style>
 """, unsafe_allow_html=True)
 
+# Get database statistics
+num_entries, num_contributors = get_database_stats()
+
 # Main layout containers
 header = st.container()
+stats_banner = st.container()
 body = st.container()
 guide = st.container()
 feedback_section = st.container()
@@ -207,6 +294,20 @@ with header:
     <div class="main-header">
         <h1>!!NAME!! CCS Logging and Processing Tools</h1>
         <p>Work-in-progress tools for logging peer-reviewed protein CCS values and processing IM-MS data.</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+with stats_banner:
+    st.markdown(f"""
+    <div class="stats-banner">
+        <div class="stat-item">
+            <div class="stat-number">{num_entries:,}</div>
+            <div class="stat-label">Database Entries</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number">{num_contributors:,}</div>
+            <div class="stat-label">Contributors</div>
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
