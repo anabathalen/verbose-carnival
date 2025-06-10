@@ -319,14 +319,10 @@ with body:
     </div>
     """, unsafe_allow_html=True)
     
-    # Try to display the image using st.image instead
-    try:
-        st.image("data/beveridge_trends.png", caption="Schematic representation of trends established by Beveridge <em>et al.</em> in native IM-MS data for globular and disordered/denatured proteins.", use_container_width=True)
-    except:
-        try:
-            st.image("beveridge_trends.png", caption="Schematic representation of trends established by Beveridge <em>et al.</em> in native IM-MS data for globular and disordered/denatured proteins.", use_container_width=True)
-        except:
-            st.warning("⚠️ Could not load Beveridge Trends image.")
+    st.image(
+    "data/beveridge_trends.png",
+    caption="Schematic representation of trends established by Beveridge *et al.* in native IM-MS data for globular and disordered/denatured proteins.",
+    use_container_width=True
     
     st.markdown("""
     <div class="info-card">
