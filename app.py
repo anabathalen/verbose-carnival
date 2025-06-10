@@ -322,7 +322,7 @@ with body:
     st.image(
     "data/beveridge_trends.png",
     caption="Schematic representation of trends established by Beveridge *et al.* in native IM-MS data for globular and disordered/denatured proteins.",
-    use_container_width=True
+    use_container_width=True)
     
     st.markdown("""
     <div class="info-card">
