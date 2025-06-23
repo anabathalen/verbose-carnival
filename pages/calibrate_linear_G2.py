@@ -218,8 +218,29 @@ if st.session_state.data_uploaded:
     
     st.markdown('</div>', unsafe_allow_html=True)
     
-    # Process data button
-    if st.button("🔬 Process Data and Calculate Calibration", type="primary"):
+    # Analyte mass input - separate and prominent
+    st.markdown("### Analyte Information")
+    st.markdown('<div class="parameter-box">', unsafe_allow_html=True)
+    mass_analyte = st.number_input(
+        "**Analyte Mass (Da)**", 
+        value=0.0, 
+        min_value=0.0,
+        format="%.4f", 
+        help="Enter the mass of your analyte in Daltons (Da). This is required for CCS calculations using the Mason-Schamp equation."
+    )
+    
+    if mass_analyte <= 0:
+        st.warning("⚠️ Please enter a valid analyte mass (> 0 Da) to proceed with CCS calculations.")
+    
+    st.markdown('</div>', unsafe_allow_html=True)
+    
+    # Process data button - only enable if mass is entered
+    process_disabled = mass_analyte <= 0
+    
+    if process_disabled:
+        st.info("👆 Please enter the analyte mass above to enable data processing.")
+    
+    if st.button("🔬 Process Data and Calculate Calibration", type="primary", disabled=process_disabled):
         # Find maximum drift times and intensities
         results_data = []
         
