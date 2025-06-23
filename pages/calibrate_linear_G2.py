@@ -400,52 +400,87 @@ if st.session_state.data_uploaded:
                 
                 # Summary statistics
                 st.markdown("### Summary Statistics")
-                col1, col2, col3, col4 = st.columns(4)
+                col1, col2 = st.columns(2)
                 with col1:
                     st.metric("Total Data Points", len(output_df))
                 with col2:
                     st.metric("Average CCS (Å²)", f"{output_df['CCS'].mean():.2f}")
-                with col3:
-                    st.metric("CCS Range (Å²)", f"{output_df['CCS'].max() - output_df['CCS'].min():.2f}")
-                with col4:
-                    st.metric("Voltage Range (V)", f"{abs(output_df['True_Voltage'].max() - output_df['True_Voltage'].min()):.1f}")
                 
-                # Create CCS distribution plot
-                fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
+                # Create compact table for max intensity CCS at each voltage
+                st.markdown("### CCS at Maximum Intensity (by Voltage)")
+                max_intensity_data = []
                 
-                # CCS histogram
-                ax1.hist(output_df['CCS'], bins=50, alpha=0.7, color='skyblue', edgecolor='black')
-                ax1.set_xlabel('CCS (Å²)')
-                ax1.set_ylabel('Frequency')
-                ax1.set_title('CCS Distribution')
-                ax1.grid(True, alpha=0.3)
+                for file_col, params in file_params.items():
+                    # Find max intensity and corresponding drift time for this file
+                    file_data = st.session_state.df[st.session_state.df[file_col] > 0]
+                    if not file_data.empty:
+                        max_idx = file_data[file_col].idxmax()
+                        max_drift = file_data.loc[max_idx, 'Time']
+                        max_intensity = file_data.loc[max_idx, file_col]
+                        
+                        true_voltage = (params['helium_cell_dc'] + params['bias'] - 
+                                      transfer_dc_entrance - helium_exit_dc)
+                        
+                        # Calculate CCS for max intensity point
+                        ccs_max = calculate_ccs_mason_schamp(
+                            drift_time=max_drift,
+                            voltage=abs(true_voltage),
+                            temperature=temperature,
+                            pressure=pressure,
+                            mass_analyte=mass_analyte,
+                            charge=charge_state
+                        )
+                        
+                        max_intensity_data.append({
+                            'File': params['raw_file'],
+                            'Voltage (V)': true_voltage,
+                            'Max Drift Time (ms)': max_drift,
+                            'Max Intensity': max_intensity,
+                            'CCS (Å²)': ccs_max
+                        })
                 
-                # CCS vs Drift Time scatter plot
-                scatter = ax2.scatter(output_df['Drift'], output_df['CCS'], 
-                                    c=output_df['True_Voltage'], cmap='viridis', 
-                                    alpha=0.6, s=20)
-                ax2.set_xlabel('Drift Time (ms)')
-                ax2.set_ylabel('CCS (Å²)')
-                ax2.set_title('CCS vs Drift Time (colored by Voltage)')
-                ax2.grid(True, alpha=0.3)
+                max_intensity_df = pd.DataFrame(max_intensity_data)
                 
-                # Add colorbar
-                cbar = plt.colorbar(scatter, ax=ax2)
-                cbar.set_label('True Voltage (V)')
-                
-                plt.tight_layout()
-                st.pyplot(fig)
+                if not max_intensity_df.empty:
+                    # Display compact table
+                    st.dataframe(max_intensity_df, use_container_width=True)
+                    
+                    # Plot CCS vs Voltage for max intensity points
+                    fig, ax = plt.subplots(figsize=(10, 6))
+                    
+                    ax.scatter(max_intensity_df['Voltage (V)'], max_intensity_df['CCS (Å²)'], 
+                              color='red', s=100, alpha=0.8, edgecolors='black', linewidth=1)
+                    
+                    # Add connecting line
+                    sorted_data = max_intensity_df.sort_values('Voltage (V)')
+                    ax.plot(sorted_data['Voltage (V)'], sorted_data['CCS (Å²)'], 
+                           'r--', alpha=0.6, linewidth=1)
+                    
+                    ax.set_xlabel('Voltage (V)')
+                    ax.set_ylabel('CCS (Å²)')
+                    ax.set_title('CCS vs Voltage (Maximum Intensity Points)')
+                    ax.grid(True, alpha=0.3)
+                    
+                    # Annotate points with file names
+                    for _, row in max_intensity_df.iterrows():
+                        ax.annotate(row['File'], 
+                                   (row['Voltage (V)'], row['CCS (Å²)']),
+                                   xytext=(5, 5), textcoords='offset points',
+                                   fontsize=8, alpha=0.7)
+                    
+                    plt.tight_layout()
+                    st.pyplot(fig)
                 
                 # Show file-wise summary
                 st.markdown("### File-wise Summary")
                 file_summary = comprehensive_ccs_df.groupby('File').agg({
-                    'CCS': ['count', 'mean', 'std', 'min', 'max'],
+                    'CCS': ['count', 'mean'],
                     'True_Voltage': 'first',
                     'Intensity': 'sum'
                 }).round(2)
                 
                 # Flatten column names
-                file_summary.columns = ['Data_Points', 'Mean_CCS', 'Std_CCS', 'Min_CCS', 'Max_CCS', 'True_Voltage', 'Total_Intensity']
+                file_summary.columns = ['Data_Points', 'Mean_CCS', 'True_Voltage', 'Total_Intensity']
                 st.dataframe(file_summary, use_container_width=True)
         
         else:
