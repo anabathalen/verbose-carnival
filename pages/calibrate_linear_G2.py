@@ -18,6 +18,8 @@ st.markdown("""
         color: white;
         text-align: center;
     }
+</style>
+""", unsafe_allow_html=True)
 
 def main():
 
