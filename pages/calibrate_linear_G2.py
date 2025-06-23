@@ -5,7 +5,7 @@ st.set_page_config(
     page_title="Calibrate DTIMS Data Acquired on Synapt",
     page_icon="📌",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded")
 
   # === CUSTOM CSS ===
 st.markdown("""
