@@ -86,14 +86,54 @@ def find_max_drift_time(df, column):
         return df.loc[max_idx, 'Time'], df.loc[max_idx, column]
     return None, None
 
-def calculate_ccs(drift_time, t0, td, charge=1):
+def calculate_ccs_mason_schamp(drift_time, voltage, temperature, pressure, mass_analyte, charge=1, length=25.05):
     """
-    Calculate CCS using the provided equation
-    CCS = (charge * td) / (drift_time - t0)
+    Calculate CCS using the Mason-Schamp equation
+    
+    Parameters:
+    - drift_time: drift time in ms
+    - voltage: voltage in V
+    - temperature: temperature in K
+    - pressure: pressure in mbar
+    - mass_analyte: mass of analyte in Da
+    - charge: charge state
+    - length: drift tube length in cm (default 25.05 cm for Synapt)
+    
+    Returns:
+    - CCS in Å²
     """
-    if drift_time <= t0:
-        return np.nan
-    return (charge * td) / (drift_time - t0)
+    # Constants
+    k_B = 1.380649e-23  # Boltzmann constant (J/K)
+    e = 1.602176634e-19  # Elementary charge (C)
+    N_A = 6.02214076e23  # Avogadro's number
+    mass_He = 4.002602  # Mass of Helium in Da
+    
+    # Convert units
+    drift_time_s = drift_time * 1e-3  # ms to s
+    length_m = length * 1e-2  # cm to m
+    pressure_Pa = pressure * 100  # mbar to Pa
+    
+    # Calculate reduced mass (in kg)
+    mass_analyte_kg = mass_analyte * 1.66054e-27  # Da to kg
+    mass_He_kg = mass_He * 1.66054e-27  # Da to kg
+    reduced_mass = (mass_analyte_kg * mass_He_kg) / (mass_analyte_kg + mass_He_kg)
+    
+    # Calculate mobility
+    mobility = length_m / (voltage * drift_time_s)  # m²/(V·s)
+    
+    # Calculate number density of buffer gas
+    n_gas = pressure_Pa / (k_B * temperature)  # molecules/m³
+    
+    # Mason-Schamp equation
+    # CCS = (3 * e * charge) / (16 * N_0) * sqrt(2π / (μ * k_B * T)) * (1 / K_0)
+    # Where K_0 is the mobility
+    
+    ccs_m2 = (3 * e * charge) / (16 * n_gas) * np.sqrt(2 * np.pi / (reduced_mass * k_B * temperature)) * (1 / mobility)
+    
+    # Convert to Å²
+    ccs_angstrom2 = ccs_m2 * 1e20
+    
+    return ccs_angstrom2
 
 # Initialize session state
 if 'data_uploaded' not in st.session_state:
@@ -267,56 +307,125 @@ if st.session_state.data_uploaded:
             st.markdown("### Detailed Results")
             st.dataframe(results_df, use_container_width=True)
             
-            # Calculate CCS values
-            st.markdown('<div class="section-header">🧮 CCS Calculations</div>', unsafe_allow_html=True)
+            # Calculate CCS values for ALL drift times and voltages
+            st.markdown('<div class="section-header">🧮 CCS Calculations (All Data Points)</div>', unsafe_allow_html=True)
             
             # CCS calculation parameters
             col1, col2 = st.columns(2)
             with col1:
                 charge_state = st.number_input("Charge State", value=1, min_value=1)
             with col2:
-                ccs_std_dev = st.number_input("CCS Standard Deviation", value=0.1, format="%.3f")
+                st.info(f"Using Mason-Schamp equation with drift tube length: 25.05 cm")
             
-            # Calculate CCS for each drift time
-            ccs_data = []
-            for _, row in results_df.iterrows():
-                if not pd.isna(row['Max_Drift_Time']):
-                    ccs_value = calculate_ccs(row['Max_Drift_Time'], intercept, gradient, charge_state)
-                    ccs_data.append({
-                        'Charge': charge_state,
-                        'Drift': row['Max_Drift_Time'],
-                        'CCS': ccs_value,
-                        'CCS_Std_Dev': ccs_std_dev,
-                        'Intensity': row['Max_Intensity']
-                    })
+            # Calculate CCS for ALL drift times across all files and voltages
+            all_ccs_data = []
             
-            ccs_df = pd.DataFrame(ccs_data)
-            
-            if not ccs_df.empty:
-                st.markdown("### Calculated CCS Values")
-                st.dataframe(ccs_df, use_container_width=True)
+            for file_col, params in file_params.items():
+                # Get all non-zero drift times and intensities for this file
+                file_data = st.session_state.df[st.session_state.df[file_col] > 0].copy()
                 
-                # Create download button for CCS data
+                if not file_data.empty:
+                    true_voltage = (params['helium_cell_dc'] + params['bias'] - 
+                                  transfer_dc_entrance - helium_exit_dc)
+                    
+                    for _, row in file_data.iterrows():
+                        drift_time = row['Time']
+                        intensity = row[file_col]
+                        
+                        # Calculate CCS using Mason-Schamp equation
+                        ccs_value = calculate_ccs_mason_schamp(
+                            drift_time=drift_time,
+                            voltage=abs(true_voltage),  # Use absolute value
+                            temperature=temperature,
+                            pressure=pressure,
+                            mass_analyte=mass_analyte,
+                            charge=charge_state
+                        )
+                        
+                        all_ccs_data.append({
+                            'Charge': charge_state,
+                            'Drift': drift_time,
+                            'CCS': ccs_value,
+                            'True_Voltage': true_voltage,
+                            'Intensity': intensity,
+                            'File': params['raw_file']
+                        })
+            
+            # Create comprehensive CCS DataFrame
+            comprehensive_ccs_df = pd.DataFrame(all_ccs_data)
+            
+            if not comprehensive_ccs_df.empty:
+                # Remove any invalid CCS values (NaN or infinite)
+                comprehensive_ccs_df = comprehensive_ccs_df.dropna(subset=['CCS'])
+                comprehensive_ccs_df = comprehensive_ccs_df[np.isfinite(comprehensive_ccs_df['CCS'])]
+                
+                st.markdown("### Complete CCS Dataset")
+                st.dataframe(comprehensive_ccs_df, use_container_width=True)
+                
+                # Create output DataFrame with the specified columns
+                output_df = comprehensive_ccs_df[['Charge', 'Drift', 'CCS', 'True_Voltage', 'Intensity']].copy()
+                
+                # Create download button for comprehensive CCS data
                 csv_buffer = io.StringIO()
-                ccs_df.to_csv(csv_buffer, index=False)
+                output_df.to_csv(csv_buffer, index=False)
                 csv_string = csv_buffer.getvalue()
                 
                 st.download_button(
-                    label="📥 Download Calibrated Data (CSV)",
+                    label="📥 Download Complete Calibrated Data (CSV)",
                     data=csv_string,
-                    file_name="dtims_calibrated_data.csv",
+                    file_name="dtims_complete_calibrated_data.csv",
                     mime="text/csv"
                 )
                 
                 # Summary statistics
                 st.markdown("### Summary Statistics")
-                col1, col2, col3 = st.columns(3)
+                col1, col2, col3, col4 = st.columns(4)
                 with col1:
-                    st.metric("Average CCS", f"{ccs_df['CCS'].mean():.2f}")
+                    st.metric("Total Data Points", len(output_df))
                 with col2:
-                    st.metric("CCS Range", f"{ccs_df['CCS'].max() - ccs_df['CCS'].min():.2f}")
+                    st.metric("Average CCS (Å²)", f"{output_df['CCS'].mean():.2f}")
                 with col3:
-                    st.metric("Total Data Points", len(ccs_df))
+                    st.metric("CCS Range (Å²)", f"{output_df['CCS'].max() - output_df['CCS'].min():.2f}")
+                with col4:
+                    st.metric("Voltage Range (V)", f"{abs(output_df['True_Voltage'].max() - output_df['True_Voltage'].min()):.1f}")
+                
+                # Create CCS distribution plot
+                fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
+                
+                # CCS histogram
+                ax1.hist(output_df['CCS'], bins=50, alpha=0.7, color='skyblue', edgecolor='black')
+                ax1.set_xlabel('CCS (Å²)')
+                ax1.set_ylabel('Frequency')
+                ax1.set_title('CCS Distribution')
+                ax1.grid(True, alpha=0.3)
+                
+                # CCS vs Drift Time scatter plot
+                scatter = ax2.scatter(output_df['Drift'], output_df['CCS'], 
+                                    c=output_df['True_Voltage'], cmap='viridis', 
+                                    alpha=0.6, s=20)
+                ax2.set_xlabel('Drift Time (ms)')
+                ax2.set_ylabel('CCS (Å²)')
+                ax2.set_title('CCS vs Drift Time (colored by Voltage)')
+                ax2.grid(True, alpha=0.3)
+                
+                # Add colorbar
+                cbar = plt.colorbar(scatter, ax=ax2)
+                cbar.set_label('True Voltage (V)')
+                
+                plt.tight_layout()
+                st.pyplot(fig)
+                
+                # Show file-wise summary
+                st.markdown("### File-wise Summary")
+                file_summary = comprehensive_ccs_df.groupby('File').agg({
+                    'CCS': ['count', 'mean', 'std', 'min', 'max'],
+                    'True_Voltage': 'first',
+                    'Intensity': 'sum'
+                }).round(2)
+                
+                # Flatten column names
+                file_summary.columns = ['Data_Points', 'Mean_CCS', 'Std_CCS', 'Min_CCS', 'Max_CCS', 'True_Voltage', 'Total_Intensity']
+                st.dataframe(file_summary, use_container_width=True)
         
         else:
             st.error("Not enough valid data points for calibration. Need at least 2 data points.")
@@ -330,11 +439,11 @@ with st.expander("How to use this tool"):
     2. **Set global parameters** - Enter the experimental conditions (pressure, temperature, pusher time, etc.)
     3. **Set file-specific parameters** - For each raw file, enter the Helium Cell DC and Bias values
     4. **Process the data** - The tool will:
-       - Find the drift time with maximum intensity for each file
+       - Find the drift time with maximum intensity for each file (for calibration plot)
        - Calculate the true voltage: (Helium Cell DC + Bias) - (Transfer DC Entrance + Helium Exit DC)
-       - Plot drift time vs. 1/voltage and fit a linear regression
-       - Calculate CCS values using the equation: CCS = (charge × td) / (drift_time - t0)
-       - Generate a downloadable CSV with calibrated data
+       - Plot drift time vs. 1/voltage and fit a linear regression for calibration verification
+       - Calculate CCS for ALL drift times using the Mason-Schamp equation
+       - Generate a downloadable CSV with complete calibrated data (Charge, Drift, CCS, True_Voltage, Intensity)
     """)
 
 with st.expander("About the calculations"):
@@ -344,14 +453,25 @@ with st.expander("About the calculations"):
     True Voltage = (Helium Cell DC + Bias) - (Transfer DC Entrance + Helium Exit DC)
     ```
     
-    **CCS Calculation:**
+    **Mason-Schamp CCS Calculation:**
     ```
-    CCS = (charge × td) / (drift_time - t0)
+    CCS = (3 × e × z) / (16 × N₀) × √(2π / (μ × k_B × T)) × (1 / K₀)
     ```
     
     Where:
-    - `td` = gradient from the linear fit of drift time vs. 1/voltage
-    - `t0` = intercept from the linear fit
-    - `charge` = charge state of the ion (typically 1)
-    - `drift_time` = measured drift time at maximum intensity
+    - `e` = elementary charge (1.602 × 10⁻¹⁹ C)
+    - `z` = charge state
+    - `N₀` = number density of buffer gas
+    - `μ` = reduced mass of analyte-buffer gas system
+    - `k_B` = Boltzmann constant (1.381 × 10⁻²³ J/K)
+    - `T` = temperature (K)
+    - `K₀` = mobility = L/(V×t_d)
+    - `L` = drift tube length (25.05 cm for Synapt)
+    
+    **Reduced Mass Calculation:**
+    ```
+    μ = (m_analyte × m_He) / (m_analyte + m_He)
+    ```
+    
+    Where m_He = 4.002602 Da
     """)
