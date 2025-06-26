@@ -650,7 +650,7 @@ def show_data_entry_page():
         """)
         
         # Create form with unique key to prevent conflicts
-        with st.form("protein_form", clear_on_submit=True):
+        with st.form("protein_form", clear_on_submit=False):
             st.markdown("---")
             st.markdown("#### ⚙️ General Information")
             
