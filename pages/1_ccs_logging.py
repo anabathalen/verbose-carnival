@@ -569,7 +569,7 @@ def show_data_entry_page():
     """, unsafe_allow_html=True)
 
     # Load existing data with enhanced caching
-    @st.cache_data(ttl=300, show_spinner="Loading existing database...")  # Reduced TTL for more frequent updates
+    @st.cache_data(ttl=300, show_spinner="Loading existing database...")
     def load_existing_data():
         g = authenticate_github()
         if g:
@@ -667,7 +667,7 @@ def show_data_entry_page():
                     # Auto-save after DOI verification
                     auto_save_to_browser()
 
-    # Step 2: Protein Data Entry (keeping the existing form logic)
+    # Step 2: Protein Data Entry
     if st.session_state.show_full_form:
         st.markdown("---")
         st.markdown('<h2 class="section-header">Step 2: Protein Data Entry</h2>', unsafe_allow_html=True)
@@ -688,16 +688,234 @@ def show_data_entry_page():
         Once you are finished, click '🚀 Submit All Data to Database'.
         """)
         
-        # Keep the existing form logic but add refresh calls on interactions
-        # [Include the entire existing form logic here - it's quite long so I'll summarize the key additions]
+        # Display current protein entries
+        if st.session_state.protein_data:
+            st.markdown("### Current Protein Entries")
+            for i, protein in enumerate(st.session_state.protein_data):
+                with st.expander(f"Protein {i+1}: {protein['protein_name']}"):
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.write(f"**Instrument:** {protein['instrument']}")
+                        st.write(f"**IMS Type:** {protein['ims_type']}")
+                        st.write(f"**Drift Gas:** {protein['drift_gas']}")
+                        st.write(f"**Native Measurement:** {protein['native_measurement']}")
+                    with col2:
+                        st.write(f"**Ionization Mode:** {protein['ionization_mode']}")
+                        st.write(f"**Subunit Count:** {protein['subunit_count']}")
+                        if protein.get('oligomer_type'):
+                            st.write(f"**Oligomer Type:** {protein['oligomer_type']}")
+                    
+                    st.write("**CCS Data:**")
+                    ccs_df = pd.DataFrame(protein['ccs_data'], columns=['Charge State', 'CCS Value (Ų)'])
+                    st.dataframe(ccs_df, use_container_width=True)
+                    
+                    if st.button(f"🗑️ Remove Entry {i+1}", key=f"remove_{i}"):
+                        st.session_state.protein_data.pop(i)
+                        refresh_session()
+                        auto_save_to_browser()
+                        st.rerun()
+
+        # Protein entry form
+        st.markdown("### Add New Protein Entry")
         
-        # Add refresh_session() calls to key form interactions:
-        # - After form submissions
-        # - After button clicks
-        # - After significant user interactions
-        
-        # The rest of your existing form logic goes here...
-        # Just add refresh_session() calls at strategic points
+        with st.form("protein_entry_form"):
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.markdown("#### Basic Information")
+                protein_name = st.text_input("Protein Name*", placeholder="e.g., Cytochrome C")
+                instrument = st.selectbox("Instrument*", [
+                    "Waters Synapt G2-Si", "Waters Synapt G2-S", "Waters Synapt G1",
+                    "Agilent 6560", "Agilent 6545", "Bruker timsTOF Pro",
+                    "Other"
+                ])
+                if instrument == "Other":
+                    instrument = st.text_input("Specify Instrument")
+                
+                ims_type = st.selectbox("IMS Type*", [
+                    "TWIMS", "DTIMS", "TIMS", "Other"
+                ])
+                if ims_type == "Other":
+                    ims_type = st.text_input("Specify IMS Type")
+                
+                drift_gas = st.selectbox("Drift Gas*", [
+                    "Nitrogen", "Helium", "Argon", "Other"
+                ])
+                if drift_gas == "Other":
+                    drift_gas = st.text_input("Specify Drift Gas")
+            
+            with col2:
+                st.markdown("#### Measurement Conditions")
+                ionization_mode = st.selectbox("Ionization Mode*", [
+                    "Positive", "Negative"
+                ])
+                
+                native_measurement = st.selectbox("Native Measurement*", [
+                    "Yes", "No"
+                ])
+                
+                subunit_count = st.number_input("Subunit Count*", min_value=1, value=1, step=1)
+                
+                oligomer_type = st.text_input("Oligomer Type", placeholder="e.g., homodimer, heterotetramer (optional)")
+            
+            # Optional fields
+            st.markdown("#### Optional Information")
+            col3, col4 = st.columns(2)
+            
+            with col3:
+                uniprot = st.text_input("UniProt ID", placeholder="e.g., P12345")
+                pdb = st.text_input("PDB ID", placeholder="e.g., 1ABC")
+                sequence = st.text_area("Protein Sequence", placeholder="Optional: Full amino acid sequence")
+            
+            with col4:
+                sequence_mass = st.number_input("Sequence Mass (Da)", min_value=0.0, value=0.0, step=0.1)
+                measured_mass = st.number_input("Measured Mass (Da)", min_value=0.0, value=0.0, step=0.1)
+                additional_notes = st.text_area("Additional Notes", placeholder="Any additional information")
+            
+            # CCS Data Entry
+            st.markdown("#### CCS Data Entry")
+            st.markdown("Enter charge states and corresponding CCS values. Add multiple rows for different charge states or conformers.")
+            
+            # Initialize CCS data in session state if not exists
+            if 'temp_ccs_data' not in st.session_state:
+                st.session_state.temp_ccs_data = []
+            
+            col5, col6, col7 = st.columns([2, 2, 1])
+            with col5:
+                charge_state = st.number_input("Charge State", min_value=1, value=1, step=1, key="charge_input")
+            with col6:
+                ccs_value = st.number_input("CCS Value (Ų)", min_value=0.0, step=0.1, key="ccs_input")
+            with col7:
+                st.markdown("<br>", unsafe_allow_html=True)
+                if st.form_submit_button("➕ Add CCS"):
+                    if charge_state and ccs_value > 0:
+                        st.session_state.temp_ccs_data.append([charge_state, ccs_value])
+                        refresh_session()
+                        st.rerun()
+            
+            # Display current CCS data
+            if st.session_state.temp_ccs_data:
+                st.markdown("**Current CCS Data:**")
+                ccs_df = pd.DataFrame(st.session_state.temp_ccs_data, columns=['Charge State', 'CCS Value (Ų)'])
+                st.dataframe(ccs_df, use_container_width=True)
+                
+                if st.form_submit_button("🗑️ Clear CCS Data"):
+                    st.session_state.temp_ccs_data = []
+                    refresh_session()
+                    st.rerun()
+            
+            # Form submission
+            col8, col9 = st.columns(2)
+            with col8:
+                submit_protein = st.form_submit_button("✚ Add Protein Entry", use_container_width=True)
+            with col9:
+                clear_form = st.form_submit_button("🗑️ Clear Form", use_container_width=True)
+            
+            if submit_protein:
+                refresh_session()
+                # Validation
+                errors = []
+                if not protein_name:
+                    errors.append("Protein Name is required")
+                if not instrument:
+                    errors.append("Instrument is required")
+                if not ims_type:
+                    errors.append("IMS Type is required")
+                if not drift_gas:
+                    errors.append("Drift Gas is required")
+                if not st.session_state.temp_ccs_data:
+                    errors.append("At least one CCS value is required")
+                
+                if errors:
+                    st.error("Please fix the following errors:\n" + "\n".join(f"• {error}" for error in errors))
+                else:
+                    # Create protein entry
+                    protein_entry = {
+                        'user_name': st.session_state.current_user,
+                        'protein_name': protein_name,
+                        'instrument': instrument,
+                        'ims_type': ims_type,
+                        'drift_gas': drift_gas,
+                        'ionization_mode': ionization_mode,
+                        'native_measurement': native_measurement,
+                        'subunit_count': subunit_count,
+                        'oligomer_type': oligomer_type,
+                        'uniprot': uniprot,
+                        'pdb': pdb,
+                        'sequence': sequence,
+                        'sequence_mass': sequence_mass if sequence_mass > 0 else None,
+                        'measured_mass': measured_mass if measured_mass > 0 else None,
+                        'additional_notes': additional_notes,
+                        'ccs_data': st.session_state.temp_ccs_data.copy()
+                    }
+                    
+                    st.session_state.protein_data.append(protein_entry)
+                    st.session_state.temp_ccs_data = []
+                    auto_save_to_browser()
+                    st.success(f"✅ Protein entry for '{protein_name}' added successfully!")
+                    st.rerun()
+            
+            if clear_form:
+                st.session_state.temp_ccs_data = []
+                refresh_session()
+                st.rerun()
+
+        # Final submission
+        if st.session_state.protein_data:
+            st.markdown("---")
+            st.markdown("### Final Submission")
+            
+            col10, col11 = st.columns([3, 1])
+            with col10:
+                st.info(f"Ready to submit {len(st.session_state.protein_data)} protein entries to the database.")
+            with col11:
+                if st.button("🚀 Submit All Data to Database", use_container_width=True):
+                    refresh_session()
+                    
+                    with st.spinner("Submitting data to GitHub..."):
+                        # Convert to DataFrame
+                        new_df = convert_protein_data_to_dataframe(
+                            st.session_state.protein_data, 
+                            st.session_state.paper_details
+                        )
+                        
+                        # Combine with existing data
+                        if not existing_data.empty:
+                            combined_df = pd.concat([existing_data, new_df], ignore_index=True)
+                        else:
+                            combined_df = new_df
+                        
+                        # Submit to GitHub
+                        g = authenticate_github()
+                        if g:
+                            repo = get_repository(g, st.secrets["REPO_NAME"])
+                            if repo:
+                                success, message = update_csv_in_github(repo, st.secrets["CSV_PATH"], combined_df)
+                                
+                                if success:
+                                    st.success("🎉 " + message)
+                                    # Clear session data
+                                    st.session_state.protein_data = []
+                                    st.session_state.paper_details = {}
+                                    st.session_state.show_full_form = False
+                                    st.session_state.new_doi = ""
+                                    if 'temp_ccs_data' in st.session_state:
+                                        del st.session_state.temp_ccs_data
+                                    if 'auto_save_data' in st.session_state:
+                                        del st.session_state.auto_save_data
+                                    
+                                    # Clear cache to show updated data
+                                    st.cache_data.clear()
+                                    
+                                    st.balloons()
+                                    time.sleep(2)
+                                    st.rerun()
+                                else:
+                                    st.error("❌ " + message)
+                            else:
+                                st.error("Failed to access GitHub repository")
+                        else:
+                            st.error("Failed to authenticate with GitHub")
 
 def main():
     """Main application entry point with enhanced session management."""
