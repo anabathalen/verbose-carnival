@@ -724,16 +724,14 @@ def show_data_entry_page():
             with col1:
                 st.markdown("#### Basic Information")
                 protein_name = st.text_input("Protein Name*", placeholder="e.g., Cytochrome C")
-                instrument = st.selectbox("Instrument*", [
-                    "Waters Synapt G2-Si", "Waters Synapt G2-S", "Waters Synapt G1",
-                    "Agilent 6560", "Agilent 6545", "Bruker timsTOF Pro",
-                    "Other"
+                instrument = st.selectbox("Instrument Family*", [
+                    "Waters Synapt Series", "Waters Cyclic Series", "Agilent 6560", "Bruker timsTOF", "Waters Vion", "Other"
                 ])
                 if instrument == "Other":
                     instrument = st.text_input("Specify Instrument")
                 
                 ims_type = st.selectbox("IMS Type*", [
-                    "TWIMS", "DTIMS", "TIMS", "Other"
+                    "TWIMS", "DTIMS", "TIMS", "Cyclic", "Other"
                 ])
                 if ims_type == "Other":
                     ims_type = st.text_input("Specify IMS Type")
