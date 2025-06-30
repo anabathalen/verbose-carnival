@@ -267,7 +267,7 @@ if twim_extract_file and calibration_file:
                 ccs_value = cal_data.loc[closest_idx, "CCS"]
 
                 for col_idx, intensity in enumerate(intensities):
-                    cv = collision_voltages[col_idx]
+                    cv = collision_voltages[col_idx].dropna()
                     calibrated_data.append([ccs_value, drift_time, float(cv), intensity])
 
             # Convert calibrated data to NumPy array
