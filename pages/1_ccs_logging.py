@@ -493,7 +493,7 @@ def update_csv_in_github(repo, path, df):
         return False, f"Unexpected error: {e}"
 
 def convert_protein_data_to_dataframe(protein_data_list, paper_details):
-    """Convert list of protein entries to DataFrame format for CSV."""
+    """Convert list of protein entries to DataFrame format for CSV with enhanced fields."""
     rows = []
     for protein in protein_data_list:
         for charge, ccs in protein['ccs_data']:
@@ -510,10 +510,17 @@ def convert_protein_data_to_dataframe(protein_data_list, paper_details):
                 'subunit_count': protein['subunit_count'],
                 'oligomer_type': protein.get('oligomer_type'),
                 'uniprot': protein.get('uniprot'),
+                'uniprot_source': protein.get('uniprot_source'),  # New field
                 'pdb': protein.get('pdb'),
+                'pdb_source': protein.get('pdb_source'),  # New field
                 'sequence': protein.get('sequence'),
+                'sequence_source': protein.get('sequence_source'),  # New field
                 'sequence_mass': protein.get('sequence_mass'),
+                'sequence_mass_source': protein.get('sequence_mass_source'),  # New field
                 'measured_mass': protein.get('measured_mass'),
+                'measured_mass_source': protein.get('measured_mass_source'),  # New field
+                'measurement_conditions_description': protein.get('measurement_conditions_description'),  # New field
+                'sample_description': protein.get('sample_description'),  # New field
                 'additional_notes': protein.get('additional_notes'),
                 'paper_title': paper_details['paper_title'],
                 'authors': paper_details['authors'],
@@ -524,6 +531,265 @@ def convert_protein_data_to_dataframe(protein_data_list, paper_details):
             }
             rows.append(row)
     return pd.DataFrame(rows)
+
+def show_enhanced_protein_form():
+    """Enhanced protein entry form with source tracking and author descriptions."""
+    
+    with st.form("protein_entry_form"):
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("#### Basic Information")
+            protein_name = st.text_input("Protein Name*", placeholder="e.g., Cytochrome C")
+            instrument = st.selectbox("Instrument Family*", [
+                "Waters Synapt Series", "Waters Cyclic Series", "Agilent 6560", "Bruker timsTOF", "Waters Vion", "Other"
+            ])
+            if instrument == "Other":
+                instrument = st.text_input("Specify Instrument")
+            
+            ims_type = st.selectbox("IMS Type*", [
+                "TWIMS", "DTIMS", "TIMS", "Cyclic", "Other"
+            ])
+            if ims_type == "Other":
+                ims_type = st.text_input("Specify IMS Type")
+            
+            drift_gas = st.selectbox("Drift Gas*", [
+                "Nitrogen", "Helium", "Argon", "Other"
+            ])
+            if drift_gas == "Other":
+                drift_gas = st.text_input("Specify Drift Gas")
+        
+        with col2:
+            st.markdown("#### Measurement Conditions")
+            ionization_mode = st.selectbox("Ionization Mode*", [
+                "Positive", "Negative"
+            ])
+            
+            native_measurement = st.selectbox("Native Measurement*", [
+                "Yes", "No"
+            ])
+            
+            subunit_count = st.number_input("Subunit Count*", min_value=1, value=1, step=1)
+            
+            oligomer_type = st.text_input("Oligomer Type", placeholder="e.g., homodimer, heterotetramer (optional)")
+        
+        # NEW SECTION: Author Descriptions
+        st.markdown("#### Author Descriptions from Paper")
+        st.markdown("*Copy and paste relevant sections from the paper*")
+        
+        col3, col4 = st.columns(2)
+        with col3:
+            measurement_conditions_description = st.text_area(
+                "Measurement Conditions Description",
+                placeholder="Copy and paste the authors' description of measurement conditions, instrument settings, etc.",
+                help="Include details about buffer conditions, instrument parameters, calibration, etc. as described by the authors"
+            )
+        
+        with col4:
+            sample_description = st.text_area(
+                "Sample Description", 
+                placeholder="Copy and paste the authors' description of the sample preparation and characteristics",
+                help="Include details about protein concentration, buffer composition, sample preparation, purity, etc. as described by the authors"
+            )
+        
+        # ENHANCED SECTION: Optional Information with Source Tracking
+        st.markdown("#### Optional Information with Source Tracking")
+        st.markdown("*For each field, indicate whether the information was provided in the paper or if you searched for it elsewhere*")
+        
+        # UniProt ID with source
+        col5, col6 = st.columns([3, 1])
+        with col5:
+            uniprot = st.text_input("UniProt ID", placeholder="e.g., P12345")
+        with col6:
+            uniprot_source = st.selectbox("Source", ["", "Provided in paper", "User searched"], key="uniprot_source") if uniprot else ""
+        
+        # PDB ID with source
+        col7, col8 = st.columns([3, 1])
+        with col7:
+            pdb = st.text_input("PDB ID", placeholder="e.g., 1ABC")
+        with col8:
+            pdb_source = st.selectbox("Source", ["", "Provided in paper", "User searched"], key="pdb_source") if pdb else ""
+        
+        # Protein Sequence with source
+        col9, col10 = st.columns([3, 1])
+        with col9:
+            sequence = st.text_area("Protein Sequence", placeholder="Optional: Full amino acid sequence")
+        with col10:
+            st.markdown("<br>", unsafe_allow_html=True)
+            sequence_source = st.selectbox("Source", ["", "Provided in paper", "User searched"], key="sequence_source") if sequence else ""
+        
+        # Sequence Mass with source
+        col11, col12 = st.columns([3, 1])
+        with col11:
+            sequence_mass = st.number_input("Sequence Mass (Da)", min_value=0.0, value=0.0, step=0.1)
+        with col12:
+            sequence_mass_source = st.selectbox("Source", ["", "Provided in paper", "User searched"], key="sequence_mass_source") if sequence_mass > 0 else ""
+        
+        # Measured Mass with source
+        col13, col14 = st.columns([3, 1])
+        with col13:
+            measured_mass = st.number_input("Measured Mass (Da)", min_value=0.0, value=0.0, step=0.1)
+        with col14:
+            measured_mass_source = st.selectbox("Source", ["", "Provided in paper", "User searched"], key="measured_mass_source") if measured_mass > 0 else ""
+        
+        # Additional Notes
+        additional_notes = st.text_area("Additional Notes", placeholder="Any additional information")
+        
+        # CCS Data Entry (unchanged)
+        st.markdown("#### CCS Data Entry")
+        st.markdown("Enter charge states and corresponding CCS values. Add multiple rows for different charge states or conformers.")
+        
+        # Initialize CCS data in session state if not exists
+        if 'temp_ccs_data' not in st.session_state:
+            st.session_state.temp_ccs_data = []
+        
+        col15, col16, col17 = st.columns([2, 2, 1])
+        with col15:
+            charge_state = st.number_input("Charge State", min_value=1, value=1, step=1, key="charge_input")
+        with col16:
+            ccs_value = st.number_input("CCS Value (Ų)", min_value=0.0, step=0.1, key="ccs_input")
+        with col17:
+            st.markdown("<br>", unsafe_allow_html=True)
+            if st.form_submit_button("➕ Add CCS"):
+                if charge_state and ccs_value > 0:
+                    st.session_state.temp_ccs_data.append([charge_state, ccs_value])
+                    refresh_session()
+                    st.rerun()
+        
+        # Display current CCS data
+        if st.session_state.temp_ccs_data:
+            st.markdown("**Current CCS Data:**")
+            ccs_df = pd.DataFrame(st.session_state.temp_ccs_data, columns=['Charge State', 'CCS Value (Ų)'])
+            st.dataframe(ccs_df, use_container_width=True)
+            
+            if st.form_submit_button("🗑️ Clear CCS Data"):
+                st.session_state.temp_ccs_data = []
+                refresh_session()
+                st.rerun()
+        
+        # Form submission
+        col18, col19 = st.columns(2)
+        with col18:
+            submit_protein = st.form_submit_button("✚ Add Protein Entry", use_container_width=True)
+        with col19:
+            clear_form = st.form_submit_button("🗑️ Clear Form", use_container_width=True)
+        
+        if submit_protein:
+            refresh_session()
+            # Validation
+            errors = []
+            if not protein_name:
+                errors.append("Protein Name is required")
+            if not instrument:
+                errors.append("Instrument is required")
+            if not ims_type:
+                errors.append("IMS Type is required")
+            if not drift_gas:
+                errors.append("Drift Gas is required")
+            if not st.session_state.temp_ccs_data:
+                errors.append("At least one CCS value is required")
+            
+            # Validation for source fields
+            if uniprot and not uniprot_source:
+                errors.append("Please specify source for UniProt ID")
+            if pdb and not pdb_source:
+                errors.append("Please specify source for PDB ID")
+            if sequence and not sequence_source:
+                errors.append("Please specify source for Protein Sequence")
+            if sequence_mass > 0 and not sequence_mass_source:
+                errors.append("Please specify source for Sequence Mass")
+            if measured_mass > 0 and not measured_mass_source:
+                errors.append("Please specify source for Measured Mass")
+            
+            if errors:
+                st.error("Please fix the following errors:\n" + "\n".join(f"• {error}" for error in errors))
+            else:
+                # Create protein entry with enhanced fields
+                protein_entry = {
+                    'user_name': st.session_state.current_user,
+                    'protein_name': protein_name,
+                    'instrument': instrument,
+                    'ims_type': ims_type,
+                    'drift_gas': drift_gas,
+                    'ionization_mode': ionization_mode,
+                    'native_measurement': native_measurement,
+                    'subunit_count': subunit_count,
+                    'oligomer_type': oligomer_type,
+                    'uniprot': uniprot,
+                    'uniprot_source': uniprot_source if uniprot else None,
+                    'pdb': pdb,
+                    'pdb_source': pdb_source if pdb else None,
+                    'sequence': sequence,
+                    'sequence_source': sequence_source if sequence else None,
+                    'sequence_mass': sequence_mass if sequence_mass > 0 else None,
+                    'sequence_mass_source': sequence_mass_source if sequence_mass > 0 else None,
+                    'measured_mass': measured_mass if measured_mass > 0 else None,
+                    'measured_mass_source': measured_mass_source if measured_mass > 0 else None,
+                    'measurement_conditions_description': measurement_conditions_description,
+                    'sample_description': sample_description,
+                    'additional_notes': additional_notes,
+                    'ccs_data': st.session_state.temp_ccs_data.copy()
+                }
+                
+                st.session_state.protein_data.append(protein_entry)
+                st.session_state.temp_ccs_data = []
+                auto_save_to_browser()
+                st.success(f"✅ Protein entry for '{protein_name}' added successfully!")
+                st.rerun()
+        
+        if clear_form:
+            st.session_state.temp_ccs_data = []
+            refresh_session()
+            st.rerun()
+
+def display_current_protein_entries():
+    """Display current protein entries with enhanced information."""
+    if st.session_state.protein_data:
+        st.markdown("### Current Protein Entries")
+        for i, protein in enumerate(st.session_state.protein_data):
+            with st.expander(f"Protein {i+1}: {protein['protein_name']}"):
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.write(f"**Instrument:** {protein['instrument']}")
+                    st.write(f"**IMS Type:** {protein['ims_type']}")
+                    st.write(f"**Drift Gas:** {protein['drift_gas']}")
+                    st.write(f"**Native Measurement:** {protein['native_measurement']}")
+                    st.write(f"**Ionization Mode:** {protein['ionization_mode']}")
+                    st.write(f"**Subunit Count:** {protein['subunit_count']}")
+                    if protein.get('oligomer_type'):
+                        st.write(f"**Oligomer Type:** {protein['oligomer_type']}")
+                
+                with col2:
+                    # Display optional fields with sources
+                    if protein.get('uniprot'):
+                        st.write(f"**UniProt:** {protein['uniprot']} ({protein.get('uniprot_source', 'Unknown source')})")
+                    if protein.get('pdb'):
+                        st.write(f"**PDB:** {protein['pdb']} ({protein.get('pdb_source', 'Unknown source')})")
+                    if protein.get('sequence_mass'):
+                        st.write(f"**Sequence Mass:** {protein['sequence_mass']} Da ({protein.get('sequence_mass_source', 'Unknown source')})")
+                    if protein.get('measured_mass'):
+                        st.write(f"**Measured Mass:** {protein['measured_mass']} Da ({protein.get('measured_mass_source', 'Unknown source')})")
+                    if protein.get('sequence'):
+                        st.write(f"**Sequence:** Available ({protein.get('sequence_source', 'Unknown source')})")
+                
+                # Display author descriptions
+                if protein.get('measurement_conditions_description'):
+                    st.write("**Measurement Conditions (from paper):**")
+                    st.write(protein['measurement_conditions_description'])
+                
+                if protein.get('sample_description'):
+                    st.write("**Sample Description (from paper):**")
+                    st.write(protein['sample_description'])
+                
+                st.write("**CCS Data:**")
+                ccs_df = pd.DataFrame(protein['ccs_data'], columns=['Charge State', 'CCS Value (Ų)'])
+                st.dataframe(ccs_df, use_container_width=True)
+                
+                if st.button(f"🗑️ Remove Entry {i+1}", key=f"remove_{i}"):
+                    st.session_state.protein_data.pop(i)
+                    refresh_session()
+                    auto_save_to_browser()
+                    st.rerun()
 
 # === MAIN APPLICATION WITH ENHANCED SESSION MANAGEMENT ===
 
@@ -688,175 +954,9 @@ def show_data_entry_page():
         Once you are finished, click '🚀 Submit All Data to Database'.
         """)
         
-        # Display current protein entries
-        if st.session_state.protein_data:
-            st.markdown("### Current Protein Entries")
-            for i, protein in enumerate(st.session_state.protein_data):
-                with st.expander(f"Protein {i+1}: {protein['protein_name']}"):
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        st.write(f"**Instrument:** {protein['instrument']}")
-                        st.write(f"**IMS Type:** {protein['ims_type']}")
-                        st.write(f"**Drift Gas:** {protein['drift_gas']}")
-                        st.write(f"**Native Measurement:** {protein['native_measurement']}")
-                    with col2:
-                        st.write(f"**Ionization Mode:** {protein['ionization_mode']}")
-                        st.write(f"**Subunit Count:** {protein['subunit_count']}")
-                        if protein.get('oligomer_type'):
-                            st.write(f"**Oligomer Type:** {protein['oligomer_type']}")
-                    
-                    st.write("**CCS Data:**")
-                    ccs_df = pd.DataFrame(protein['ccs_data'], columns=['Charge State', 'CCS Value (Ų)'])
-                    st.dataframe(ccs_df, use_container_width=True)
-                    
-                    if st.button(f"🗑️ Remove Entry {i+1}", key=f"remove_{i}"):
-                        st.session_state.protein_data.pop(i)
-                        refresh_session()
-                        auto_save_to_browser()
-                        st.rerun()
+        display_current_protein_entries()
 
-        # Protein entry form
-        st.markdown("### Add New Protein Entry")
-        
-        with st.form("protein_entry_form"):
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                st.markdown("#### Basic Information")
-                protein_name = st.text_input("Protein Name*", placeholder="e.g., Cytochrome C")
-                instrument = st.selectbox("Instrument Family*", [
-                    "Waters Synapt Series", "Waters Cyclic Series", "Agilent 6560", "Bruker timsTOF", "Waters Vion", "Other"
-                ])
-                if instrument == "Other":
-                    instrument = st.text_input("Specify Instrument")
-                
-                ims_type = st.selectbox("IMS Type*", [
-                    "TWIMS", "DTIMS", "TIMS", "Cyclic", "Other"
-                ])
-                if ims_type == "Other":
-                    ims_type = st.text_input("Specify IMS Type")
-                
-                drift_gas = st.selectbox("Drift Gas*", [
-                    "Nitrogen", "Helium", "Argon", "Other"
-                ])
-                if drift_gas == "Other":
-                    drift_gas = st.text_input("Specify Drift Gas")
-            
-            with col2:
-                st.markdown("#### Measurement Conditions")
-                ionization_mode = st.selectbox("Ionization Mode*", [
-                    "Positive", "Negative"
-                ])
-                
-                native_measurement = st.selectbox("Native Measurement*", [
-                    "Yes", "No"
-                ])
-                
-                subunit_count = st.number_input("Subunit Count*", min_value=1, value=1, step=1)
-                
-                oligomer_type = st.text_input("Oligomer Type", placeholder="e.g., homodimer, heterotetramer (optional)")
-            
-            # Optional fields
-            st.markdown("#### Optional Information")
-            col3, col4 = st.columns(2)
-            
-            with col3:
-                uniprot = st.text_input("UniProt ID", placeholder="e.g., P12345")
-                pdb = st.text_input("PDB ID", placeholder="e.g., 1ABC")
-                sequence = st.text_area("Protein Sequence", placeholder="Optional: Full amino acid sequence")
-            
-            with col4:
-                sequence_mass = st.number_input("Sequence Mass (Da)", min_value=0.0, value=0.0, step=0.1)
-                measured_mass = st.number_input("Measured Mass (Da)", min_value=0.0, value=0.0, step=0.1)
-                additional_notes = st.text_area("Additional Notes", placeholder="Any additional information")
-            
-            # CCS Data Entry
-            st.markdown("#### CCS Data Entry")
-            st.markdown("Enter charge states and corresponding CCS values. Add multiple rows for different charge states or conformers.")
-            
-            # Initialize CCS data in session state if not exists
-            if 'temp_ccs_data' not in st.session_state:
-                st.session_state.temp_ccs_data = []
-            
-            col5, col6, col7 = st.columns([2, 2, 1])
-            with col5:
-                charge_state = st.number_input("Charge State", min_value=1, value=1, step=1, key="charge_input")
-            with col6:
-                ccs_value = st.number_input("CCS Value (Ų)", min_value=0.0, step=0.1, key="ccs_input")
-            with col7:
-                st.markdown("<br>", unsafe_allow_html=True)
-                if st.form_submit_button("➕ Add CCS"):
-                    if charge_state and ccs_value > 0:
-                        st.session_state.temp_ccs_data.append([charge_state, ccs_value])
-                        refresh_session()
-                        st.rerun()
-            
-            # Display current CCS data
-            if st.session_state.temp_ccs_data:
-                st.markdown("**Current CCS Data:**")
-                ccs_df = pd.DataFrame(st.session_state.temp_ccs_data, columns=['Charge State', 'CCS Value (Ų)'])
-                st.dataframe(ccs_df, use_container_width=True)
-                
-                if st.form_submit_button("🗑️ Clear CCS Data"):
-                    st.session_state.temp_ccs_data = []
-                    refresh_session()
-                    st.rerun()
-            
-            # Form submission
-            col8, col9 = st.columns(2)
-            with col8:
-                submit_protein = st.form_submit_button("✚ Add Protein Entry", use_container_width=True)
-            with col9:
-                clear_form = st.form_submit_button("🗑️ Clear Form", use_container_width=True)
-            
-            if submit_protein:
-                refresh_session()
-                # Validation
-                errors = []
-                if not protein_name:
-                    errors.append("Protein Name is required")
-                if not instrument:
-                    errors.append("Instrument is required")
-                if not ims_type:
-                    errors.append("IMS Type is required")
-                if not drift_gas:
-                    errors.append("Drift Gas is required")
-                if not st.session_state.temp_ccs_data:
-                    errors.append("At least one CCS value is required")
-                
-                if errors:
-                    st.error("Please fix the following errors:\n" + "\n".join(f"• {error}" for error in errors))
-                else:
-                    # Create protein entry
-                    protein_entry = {
-                        'user_name': st.session_state.current_user,
-                        'protein_name': protein_name,
-                        'instrument': instrument,
-                        'ims_type': ims_type,
-                        'drift_gas': drift_gas,
-                        'ionization_mode': ionization_mode,
-                        'native_measurement': native_measurement,
-                        'subunit_count': subunit_count,
-                        'oligomer_type': oligomer_type,
-                        'uniprot': uniprot,
-                        'pdb': pdb,
-                        'sequence': sequence,
-                        'sequence_mass': sequence_mass if sequence_mass > 0 else None,
-                        'measured_mass': measured_mass if measured_mass > 0 else None,
-                        'additional_notes': additional_notes,
-                        'ccs_data': st.session_state.temp_ccs_data.copy()
-                    }
-                    
-                    st.session_state.protein_data.append(protein_entry)
-                    st.session_state.temp_ccs_data = []
-                    auto_save_to_browser()
-                    st.success(f"✅ Protein entry for '{protein_name}' added successfully!")
-                    st.rerun()
-            
-            if clear_form:
-                st.session_state.temp_ccs_data = []
-                refresh_session()
-                st.rerun()
+        show_enhanced_protein_form()
 
         # Final submission
         if st.session_state.protein_data:
